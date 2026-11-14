@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react'
 import { Calendario } from '../componentes/Calendario'
-import { hojeLocal } from '../calc/datas'
+import { hojeApp } from '../calc/datas'
 import type { Perfil } from '../calc/energia'
 import { resumirDias, resumoMes, streak } from '../calc/historico'
-import { totaisPorDia } from '../db/repos'
+import { conquistas } from '../calc/conquistas'
+import { Icone } from '../componentes/Icone'
+import { diasDoJogo, totaisPorDia } from '../db/repos'
 import { useBanco } from '../estado'
 
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
@@ -17,13 +19,16 @@ const fmt = (n: number) => Math.round(n).toLocaleString('pt-BR')
 
 export function Historico({ perfil }: { perfil: Perfil }) {
   const { banco, versao } = useBanco()
-  const hoje = hojeLocal()
+  const hoje = hojeApp()
   const [mes, setMes] = useState(hoje.slice(0, 7))
 
   // Usa o perfil atual para todos os dias (peso antigo não é guardado na v1).
   const dias = useMemo(() => resumirDias(perfil, totaisPorDia(banco, '0000-01-01', '9999-12-31')), [banco, perfil, versao])
   const porData = useMemo(() => new Map(dias.map((d) => [d.data, d])), [dias])
-  const s = streak(dias, hoje)
+  // Hoje ainda está aberto: só dias fechados contam para a sequência.
+  const s = streak(dias.filter((d) => d.data < hoje), hoje)
+  const diasJogo = useMemo(() => diasDoJogo(banco), [banco, versao])
+  const cs = conquistas(diasJogo, dias, hoje)
   const r = resumoMes(dias, mes)
   const meses = useMemo(
     () => [...new Set(dias.map((d) => d.data.slice(0, 7)))].sort().reverse(),
@@ -69,6 +74,19 @@ export function Historico({ perfil }: { perfil: Perfil }) {
           })}
         </div>
       )}
+
+      <div className="cartao">
+        <h2>Conquistas</h2>
+        <div className="lista-conquistas">
+          {cs.map((c) => (
+            <div key={c.id} className="conquista" data-conquista={c.id} data-bloqueada={String(!c.desbloqueada)}>
+              <span className={c.desbloqueada ? 'selo on' : 'selo apagado'}><Icone nome={c.icone} /></span>
+              <div className="texto">{c.nome}<small>{c.descricao}</small></div>
+              <span className="prog">{c.progresso}/{c.meta}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </section>
   )
 }

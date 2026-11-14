@@ -1,8 +1,9 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { DEFICIT_PADRAO, gastoDia, metaConsumo, tmb, type Perfil as TPerfil, type Sexo } from '../calc/energia'
-import { salvarPerfil } from '../db/repos'
+import { diasDoJogo, salvarPerfil } from '../db/repos'
+import { nivel, xpTotal } from '../calc/jogo'
 import { useBanco } from '../estado'
-import { hojeLocal } from '../calc/datas'
+import { hojeApp } from '../calc/datas'
 import { abrirBanco } from '../db/banco'
 import { baixar, TABELAS, tabelaParaCsv, validarBancoImportado } from '../exportar'
 
@@ -55,15 +56,34 @@ export function Perfil({ perfil, aoSalvar }: { perfil: TPerfil | null; aoSalvar:
         )}
         <button disabled={!valido} onClick={salvar}>{salvo ? 'Salvo ✓' : 'Salvar'}</button>
       </div>
+      {perfil && <Nivel />}
       <Dados />
     </section>
+  )
+}
+
+function Nivel() {
+  const { banco, versao } = useBanco()
+  const xp = useMemo(() => xpTotal(diasDoJogo(banco)), [banco, versao])
+  const nv = nivel(xp)
+  return (
+    <div className="cartao">
+      <div className="nivel-topo">
+        <h2 className="acento">LV {nv.nivel}</h2>
+        <span className="suave">{nv.xpNoNivel} / {nv.xpDoNivel} XP</span>
+      </div>
+      <div className="barra-energia" data-testid="xp-barra">
+        <i style={{ width: `${(nv.xpNoNivel / nv.xpDoNivel) * 100}%` }} />
+      </div>
+      <p className="dica">XP vem de registrar: refeições e treinos. Ele nunca diminui por resultado.</p>
+    </div>
   )
 }
 
 function Dados() {
   const { banco } = useBanco()
   const [msg, setMsg] = useState<string | null>(null)
-  const hoje = hojeLocal()
+  const hoje = hojeApp()
 
   async function exportarCsvs() {
     for (const t of TABELAS) {

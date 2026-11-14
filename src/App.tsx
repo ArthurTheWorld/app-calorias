@@ -7,13 +7,15 @@ import { Hoje } from './telas/Hoje'
 import { Perfil } from './telas/Perfil'
 import { Treino } from './telas/Treino'
 import { Historico } from './telas/Historico'
+import { Icone } from './componentes/Icone'
+import type { NomeIcone } from './calc/conquistas'
 
 type Aba = 'hoje' | 'treino' | 'historico' | 'perfil'
-const ABAS: { id: Aba; rotulo: string }[] = [
-  { id: 'hoje', rotulo: 'Hoje' },
-  { id: 'treino', rotulo: 'Treino' },
-  { id: 'historico', rotulo: 'Histórico' },
-  { id: 'perfil', rotulo: 'Perfil' },
+const ABAS: { id: Aba; rotulo: string; icone: NomeIcone }[] = [
+  { id: 'hoje', rotulo: 'Hoje', icone: 'hoje' },
+  { id: 'treino', rotulo: 'Treino', icone: 'haltere' },
+  { id: 'historico', rotulo: 'Histórico', icone: 'calendario' },
+  { id: 'perfil', rotulo: 'Perfil', icone: 'perfil' },
 ]
 
 async function iniciarBanco(): Promise<Banco> {
@@ -60,7 +62,8 @@ function Telas() {
       <nav className="abas">
         {ABAS.map((a) => (
           <button key={a.id} className={abaAtual === a.id ? 'ativa' : ''} disabled={!perfil && a.id !== 'perfil'} onClick={() => setAba(a.id)}>
-            {a.rotulo}
+            <Icone nome={a.icone} />
+            <span>{a.rotulo}</span>
           </button>
         ))}
       </nav>
