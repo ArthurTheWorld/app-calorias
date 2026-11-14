@@ -3,6 +3,7 @@ import { carregarBancoSalvo, type Banco } from './db/banco'
 import { getPerfil } from './db/repos'
 import { semearTaco, type AlimentoTaco } from './db/seed'
 import { sincronizarApelidosLista } from './db/apelidos'
+import { sincronizarPorcoesLista } from './db/porcoes'
 import { ProvedorBanco, useBanco } from './estado'
 import { Hoje } from './telas/Hoje'
 import { Perfil } from './telas/Perfil'
@@ -31,6 +32,11 @@ async function iniciarBanco(): Promise<Banco> {
     sincronizarApelidosLista(b)
   } catch (e) {
     console.error('Falha ao sincronizar os apelidos', e)
+  }
+  try {
+    sincronizarPorcoesLista(b)
+  } catch (e) {
+    console.error('Falha ao sincronizar as porções', e)
   }
   return b
 }
