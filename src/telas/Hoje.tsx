@@ -13,6 +13,13 @@ import { useBanco } from '../estado'
 import { NOMES_REFEICAO, TIPOS_REFEICAO, type TipoRefeicao } from '../refeicoes'
 import { useHojeApp } from '../useHojeApp'
 import { Adicionar } from './Adicionar'
+import type { RefeicaoView } from '../db/repos'
+
+const br = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 1, useGrouping: false })
+
+/** "2 × Fatia · 50 g" quando registrado por porção; "50 g" quando em gramas. */
+const medida = (r: RefeicaoView) =>
+  r.porcao && r.qtd !== null ? `${br(r.qtd)} × ${r.porcao} · ${br(r.gramas)} g` : `${br(r.gramas)} g`
 
 export function rotuloData(data: string): string {
   const hoje = hojeApp()
@@ -143,7 +150,7 @@ export function Hoje({ perfil }: { perfil: Perfil }) {
               </div>
               {itens.map((r) => (
                 <div key={r.id} className="item">
-                  <span>{r.nome} <small>{r.gramas} g</small></span>
+                  <span>{r.nome} <small>{medida(r)}</small></span>
                   <span>{Math.round(r.kcal)}</span>
                   <button aria-label={`Remover ${r.nome}`} onClick={async () => { await removerRefeicao(banco, r.id); mudou() }}>×</button>
                 </div>

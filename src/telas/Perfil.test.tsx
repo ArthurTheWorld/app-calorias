@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import App from '../App'
 import { abrirBanco } from '../db/banco'
-import { addRefeicao, adicionarApelido, criarAlimento, getPerfil, pesosRegistrados, registrarPeso, salvarPerfil } from '../db/repos'
+import { addRefeicao, adicionarApelido, adicionarPorcao, criarAlimento, getPerfil, pesosRegistrados, registrarPeso, salvarPerfil } from '../db/repos'
 
 test('perfil mostra nível e barra de xp', async () => {
   const b = await abrirBanco()
@@ -93,4 +93,23 @@ describe('peso', () => {
     expect(pesosRegistrados(b)).toHaveLength(1)
     await waitFor(() => expect(screen.queryByRole('button', { name: /^Apagar peso/ })).toBeNull())
   })
+})
+
+test('perfil lista e remove porções do usuário, sem as da lista', async () => {
+  const b = await abrirBanco()
+  await salvarPerfil(b, { alturaCm: 175, pesoKg: 80, idade: 25, sexo: 'M', deficitMeta: 300 })
+  const id = await criarAlimento(b, { nome: 'Café', kcal100g: 9, proteinaG: 0, carboG: 0, gorduraG: 0, origem: 'custom' })
+  b.db.run("INSERT INTO porcoes (alimento_id, nome, gramas, origem) VALUES (?, 'Xícara (180 ml)', 180, 'lista')", [id])
+  const u = userEvent.setup()
+  render(<App banco={b} />)
+  await u.click(await screen.findByRole('button', { name: 'Perfil' }))
+  expect(screen.queryByText('Suas porções')).toBeNull()
+  await act(async () => { await adicionarPorcao(b, id, 'Minha caneca', 250) })
+  await u.click(screen.getByRole('button', { name: 'Hoje' }))
+  await u.click(screen.getByRole('button', { name: 'Perfil' }))
+  expect(screen.getByText('Suas porções')).toBeInTheDocument()
+  expect(screen.getByText('Minha caneca · 250 g → Café')).toBeInTheDocument()
+  expect(screen.queryByText(/Xícara/)).toBeNull()
+  await u.click(screen.getByRole('button', { name: 'Remover porção Minha caneca' }))
+  await waitFor(() => expect(screen.queryByText('Suas porções')).toBeNull())
 })

@@ -183,3 +183,14 @@ test('dia antigo usa o peso daquele dia', async () => {
   await u.click(screen.getByRole('button', { name: 'Dia anterior' }))
   expect(screen.getByTestId('gasto')).toHaveTextContent(String(Math.round(gastoDia({ ...perfil, pesoKg: 90 }, 0))))
 })
+
+test('item registrado por porção mostra quantidade × porção', async () => {
+  await salvarPerfil(b, perfil)
+  await addRefeicao(b, { data: HOJE, tipo: 'cafe', alimentoId: arroz, gramas: 50, qtd: 2, porcao: 'Fatia' })
+  await addRefeicao(b, { data: HOJE, tipo: 'cafe', alimentoId: arroz, gramas: 75, qtd: 1.5, porcao: 'Unidade' })
+  await addRefeicao(b, { data: HOJE, tipo: 'almoco', alimentoId: arroz, gramas: 150 })
+  render(<App banco={b} />)
+  expect(await screen.findByText('2 × Fatia · 50 g')).toBeInTheDocument()
+  expect(screen.getByText('1,5 × Unidade · 75 g')).toBeInTheDocument()
+  expect(screen.getByText('150 g')).toBeInTheDocument()
+})

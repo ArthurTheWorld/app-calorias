@@ -1,6 +1,9 @@
 import { useMemo, useState } from 'react'
 import { DEFICIT_PADRAO, gastoDia, metaConsumo, tmb, type Perfil as TPerfil, type Sexo } from '../calc/energia'
-import { apelidosDoUsuario, diasDoJogo, pesosRegistrados, registrarPeso, removerApelido, removerPeso, salvarPerfil } from '../db/repos'
+import {
+  apelidosDoUsuario, diasDoJogo, pesosRegistrados, porcoesDoUsuario, registrarPeso, removerApelido, removerPeso, removerPorcao,
+  salvarPerfil,
+} from '../db/repos'
 import { useHojeApp } from '../useHojeApp'
 import { nivel, xpTotal } from '../calc/jogo'
 import { useBanco } from '../estado'
@@ -65,6 +68,7 @@ export function Perfil({ perfil, aoSalvar }: { perfil: TPerfil | null; aoSalvar:
       {perfil && <Peso />}
       {perfil && <Nivel />}
       <SeusApelidos />
+      <SuasPorcoes />
       <Dados />
     </section>
   )
@@ -182,6 +186,23 @@ function Dados() {
         </label>
       </div>
       {msg && <p className="status">{msg}</p>}
+    </div>
+  )
+}
+
+function SuasPorcoes() {
+  const { banco, versao, mudou } = useBanco()
+  const porcoes = useMemo(() => porcoesDoUsuario(banco), [banco, versao])
+  if (porcoes.length === 0) return null
+  return (
+    <div className="cartao porcoes-usuario">
+      <h2>Suas porções</h2>
+      {porcoes.map((p) => (
+        <div key={p.id} className="item">
+          <span>{p.nome} · {p.gramas.toLocaleString('pt-BR', { useGrouping: false })} g → {p.nomeAlimento}</span>
+          <button aria-label={`Remover porção ${p.nome}`} onClick={async () => { await removerPorcao(banco, p.id); mudou() }}>×</button>
+        </div>
+      ))}
     </div>
   )
 }
