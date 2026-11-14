@@ -61,18 +61,26 @@ export async function salvarPerfil(b: Banco, p: Perfil): Promise<void> {
 }
 
 // ---- alimentos
-const SELECT_ALIMENTO = `SELECT id, nome, kcal_100g AS kcal100g, proteina_g AS proteinaG,
-  carbo_g AS carboG, gordura_g AS gorduraG, origem FROM alimentos`
-
 export function buscarAlimentos(b: Banco, termo: string, limite = 20): Alimento[] {
   const palavras = normalizar(termo).split(/\s+/).filter(Boolean)
   if (palavras.length === 0) return []
-  const where = palavras.map(() => 'nome_busca LIKE ?').join(' AND ')
-  // alimentos próprios primeiro, depois os nomes mais curtos (mais genéricos)
+  const noNome = palavras.map(() => 'a.nome_busca LIKE ?').join(' AND ')
+  const noApelido = palavras.map(() => 'ap.termo_busca LIKE ?').join(' AND ')
+  const padroes = palavras.map((p) => `%${p}%`)
+  // via: 0 = achado por apelido do usuário, 1 = por apelido da lista, NULL = só pelo nome.
+  // Ordem: apelidos do usuário, apelidos da lista, alimentos próprios, nomes mais curtos.
   return consultar<Alimento>(
     b,
-    `${SELECT_ALIMENTO} WHERE ${where} ORDER BY origem = 'TACO', length(nome) LIMIT ?`,
-    [...palavras.map((p) => `%${p}%`), limite],
+    `SELECT id, nome, kcal100g, proteinaG, carboG, gorduraG, origem FROM (
+       SELECT a.id, a.nome, a.kcal_100g AS kcal100g, a.proteina_g AS proteinaG, a.carbo_g AS carboG,
+              a.gordura_g AS gorduraG, a.origem,
+              (${noNome}) AS pelo_nome,
+              (SELECT MIN(CASE ap.origem WHEN 'usuario' THEN 0 ELSE 1 END)
+                 FROM apelidos ap WHERE ap.alimento_id = a.id AND ${noApelido}) AS via
+       FROM alimentos a)
+     WHERE pelo_nome OR via IS NOT NULL
+     ORDER BY via IS NULL, via, origem = 'TACO', length(nome) LIMIT ?`,
+    [...padroes, ...padroes, limite],
   )
 }
 

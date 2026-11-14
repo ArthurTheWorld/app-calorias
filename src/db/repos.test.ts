@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { abrirBanco, type Banco } from './banco'
+import { sincronizarApelidosLista } from './apelidos'
 import {
   addRefeicao, addTreino, adicionarApelido, apelidosDoUsuario, buscarAlimentos, criarAlimento, diasDoJogo, getPerfil, removerApelido,
   refeicoesDoDia, removerRefeicao, salvarPerfil, totaisPorDia, treinosDoDia,
@@ -83,4 +84,31 @@ test('apelidos do usuário: sem duplicar, com nome do alimento, removíveis', as
   expect(lista[0]).toMatchObject({ alimentoId: id, termo: 'Marmita da Vó', nomeAlimento: 'Arroz, branco, cozido' })
   await removerApelido(b, lista[0].id)
   expect(apelidosDoUsuario(b)).toHaveLength(0)
+})
+
+describe('busca por apelido', () => {
+  const taco = { kcal100g: 120, proteinaG: 0, carboG: 0, gorduraG: 0, origem: 'TACO' as const }
+  let integral: number
+  beforeEach(async () => {
+    integral = await criarAlimento(b, { ...taco, nome: 'Arroz, integral, cozido' })
+    await criarAlimento(b, { ...taco, nome: 'Arroz, tipo 1, cozido' })
+    sincronizarApelidosLista(b, { 'Arroz, tipo 1, cozido': ['arroz', 'arroz branco'] })
+  })
+
+  test('"arroz branco" e "arroz" trazem o tipo 1 primeiro', () => {
+    expect(buscarAlimentos(b, 'arroz branco')[0]?.nome).toBe('Arroz, tipo 1, cozido')
+    expect(buscarAlimentos(b, 'arroz')[0]?.nome).toBe('Arroz, tipo 1, cozido')
+    expect(buscarAlimentos(b, 'Arroz Branco')[0]?.nome).toBe('Arroz, tipo 1, cozido')
+  })
+
+  test('apelido do usuário encontra e vence a lista', async () => {
+    await adicionarApelido(b, integral, 'marmita')
+    expect(buscarAlimentos(b, 'marmita').map((a) => a.nome)).toEqual(['Arroz, integral, cozido'])
+    await adicionarApelido(b, integral, 'arroz')
+    expect(buscarAlimentos(b, 'arroz')[0]?.nome).toBe('Arroz, integral, cozido')
+  })
+
+  test('alimento achado por dois apelidos aparece uma vez', () => {
+    expect(buscarAlimentos(b, 'arroz').filter((a) => a.nome === 'Arroz, tipo 1, cozido')).toHaveLength(1)
+  })
 })
