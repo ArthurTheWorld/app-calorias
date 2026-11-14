@@ -1,12 +1,13 @@
 import type { Database } from 'sql.js'
 import { TIPOS_REFEICAO } from '../refeicoes'
 
-export const VERSAO_BANCO = 2
+export const VERSAO_BANCO = 3
 
 const CHECK_TIPOS = TIPOS_REFEICAO.map((t) => `'${t}'`).join(',')
 
 /**
- * Leva o banco para a versão atual. v1 → v2: a tabela `refeicoes` é reconstruída
+ * Leva o banco para a versão atual. v2 → v3: a tabela `apelidos` vem do SCHEMA (CREATE IF NOT EXISTS).
+ * v1 → v2: a tabela `refeicoes` é reconstruída
  * para aceitar 'madrugada' (SQLite não altera CHECK). Roda numa transação.
  */
 export function migrar(db: Database): void {

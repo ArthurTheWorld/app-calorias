@@ -34,4 +34,13 @@ CREATE TABLE IF NOT EXISTS treinos (
   kcal REAL NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_treinos_data ON treinos(data);
+CREATE TABLE IF NOT EXISTS apelidos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  alimento_id INTEGER NOT NULL REFERENCES alimentos(id),
+  termo TEXT NOT NULL,
+  termo_busca TEXT NOT NULL,
+  origem TEXT NOT NULL CHECK (origem IN ('lista','usuario')),
+  UNIQUE (alimento_id, termo_busca, origem)
+);
+CREATE INDEX IF NOT EXISTS idx_apelidos_termo ON apelidos(termo_busca);
 `

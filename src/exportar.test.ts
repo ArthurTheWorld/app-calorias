@@ -23,3 +23,11 @@ test('importação só aceita banco do app', async () => {
   expect(await validarBancoImportado(b.exportar())).toBe(true)
   expect(await validarBancoImportado(new Uint8Array([1, 2, 3]))).toBe(false)
 })
+
+test('backup sem a tabela de apelidos continua válido; apelidos entram no csv', async () => {
+  const b = await abrirBanco()
+  b.db.run('DROP TABLE apelidos')
+  expect(await validarBancoImportado(b.exportar())).toBe(true)
+  const b2 = await abrirBanco()
+  expect(tabelaParaCsv(b2, 'apelidos').split('\n')[0]).toBe('id;alimento_id;termo;termo_busca;origem')
+})

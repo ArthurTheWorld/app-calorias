@@ -190,3 +190,34 @@ export function diasDoJogo(b: Banco): DiaJogo[] {
   }
   return [...porData.values()].sort((a, c) => a.data.localeCompare(c.data))
 }
+
+// ---- apelidos
+export interface Apelido { id: number; alimentoId: number; termo: string; nomeAlimento: string }
+
+/** Forma de busca de um termo: sem acento, minúsculas, espaços colapsados. */
+export const termoBusca = (termo: string) => normalizar(termo).trim().replace(/\s+/g, ' ')
+
+/** Apelido ensinado pelo usuário. Repetido (mesmo alimento e mesmo termo) é ignorado. */
+export async function adicionarApelido(b: Banco, alimentoId: number, termo: string): Promise<void> {
+  const t = termo.trim().replace(/\s+/g, ' ')
+  if (!t) return
+  b.db.run(
+    `INSERT OR IGNORE INTO apelidos (alimento_id, termo, termo_busca, origem) VALUES (?, ?, ?, 'usuario')`,
+    [alimentoId, t, termoBusca(t)],
+  )
+  await b.salvar()
+}
+
+export function apelidosDoUsuario(b: Banco): Apelido[] {
+  return consultar<Apelido>(
+    b,
+    `SELECT ap.id, ap.alimento_id AS alimentoId, ap.termo, a.nome AS nomeAlimento
+     FROM apelidos ap JOIN alimentos a ON a.id = ap.alimento_id
+     WHERE ap.origem = 'usuario' ORDER BY ap.termo_busca`,
+  )
+}
+
+export async function removerApelido(b: Banco, id: number): Promise<void> {
+  b.db.run(`DELETE FROM apelidos WHERE id = ? AND origem = 'usuario'`, [id])
+  await b.salvar()
+}

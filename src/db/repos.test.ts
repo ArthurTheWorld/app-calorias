@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { abrirBanco, type Banco } from './banco'
 import {
-  addRefeicao, addTreino, buscarAlimentos, criarAlimento, diasDoJogo, getPerfil,
+  addRefeicao, addTreino, adicionarApelido, apelidosDoUsuario, buscarAlimentos, criarAlimento, diasDoJogo, getPerfil, removerApelido,
   refeicoesDoDia, removerRefeicao, salvarPerfil, totaisPorDia, treinosDoDia,
 } from './repos'
 
@@ -72,4 +72,15 @@ test('diasDoJogo agrupa refeições por tipo e treinos por dia', async () => {
   expect(dias[0].kcalPorTipo.jantar).toBeCloseTo(128)
   expect(Object.keys(dias[0].kcalPorTipo)).toHaveLength(2)
   expect(dias[1]).toEqual({ data: '2026-11-14', kcalPorTipo: {}, consumido: 0, treinosKcal: 300, qtdTreinos: 1 })
+})
+
+test('apelidos do usuário: sem duplicar, com nome do alimento, removíveis', async () => {
+  const id = await criarAlimento(b, arroz)
+  await adicionarApelido(b, id, 'Marmita da Vó')
+  await adicionarApelido(b, id, '  marmita   da vo ')
+  const lista = apelidosDoUsuario(b)
+  expect(lista).toHaveLength(1)
+  expect(lista[0]).toMatchObject({ alimentoId: id, termo: 'Marmita da Vó', nomeAlimento: 'Arroz, branco, cozido' })
+  await removerApelido(b, lista[0].id)
+  expect(apelidosDoUsuario(b)).toHaveLength(0)
 })

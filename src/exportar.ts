@@ -1,6 +1,8 @@
 import { carregarSql, consultar, type Banco } from './db/banco'
 
-export const TABELAS = ['perfil', 'alimentos', 'refeicoes', 'treinos'] as const
+export const TABELAS = ['perfil', 'alimentos', 'refeicoes', 'treinos', 'apelidos'] as const
+/** Tabelas que um backup precisa ter (backups de versões antigas não têm 'apelidos'). */
+export const TABELAS_OBRIGATORIAS = ['perfil', 'alimentos', 'refeicoes', 'treinos'] as const
 
 function celula(v: unknown): string {
   if (v === null || v === undefined) return ''
@@ -24,7 +26,7 @@ export async function validarBancoImportado(dados: Uint8Array): Promise<boolean>
     const res = db.exec("SELECT name FROM sqlite_master WHERE type = 'table'")
     db.close()
     const nomes = new Set((res[0]?.values ?? []).map((v) => String(v[0])))
-    return TABELAS.every((t) => nomes.has(t))
+    return TABELAS_OBRIGATORIAS.every((t) => nomes.has(t))
   } catch {
     return false
   }
