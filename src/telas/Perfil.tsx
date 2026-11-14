@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { DEFICIT_PADRAO, gastoDia, metaConsumo, tmb, type Perfil as TPerfil, type Sexo } from '../calc/energia'
-import { diasDoJogo, salvarPerfil } from '../db/repos'
+import { apelidosDoUsuario, diasDoJogo, removerApelido, salvarPerfil } from '../db/repos'
 import { nivel, xpTotal } from '../calc/jogo'
 import { useBanco } from '../estado'
 import { hojeApp } from '../calc/datas'
@@ -57,8 +57,26 @@ export function Perfil({ perfil, aoSalvar }: { perfil: TPerfil | null; aoSalvar:
         <button disabled={!valido} onClick={salvar}>{salvo ? 'Salvo ✓' : 'Salvar'}</button>
       </div>
       {perfil && <Nivel />}
+      <SeusApelidos />
       <Dados />
     </section>
+  )
+}
+
+function SeusApelidos() {
+  const { banco, versao, mudou } = useBanco()
+  const apelidos = useMemo(() => apelidosDoUsuario(banco), [banco, versao])
+  if (apelidos.length === 0) return null
+  return (
+    <div className="cartao">
+      <h2>Seus apelidos</h2>
+      {apelidos.map((a) => (
+        <div key={a.id} className="item">
+          <span>{a.termo} → {a.nomeAlimento}</span>
+          <button aria-label={`Remover apelido ${a.termo}`} onClick={async () => { await removerApelido(banco, a.id); mudou() }}>×</button>
+        </div>
+      ))}
+    </div>
   )
 }
 

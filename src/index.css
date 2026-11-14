@@ -110,3 +110,9 @@ label { display: block; font-size: .85rem; color: var(--suave); margin-bottom: 1
 .nivel-topo { display: flex; align-items: baseline; justify-content: space-between; }
 .status { font-size: .88rem; margin-top: 8px; color: var(--neutro-alto); }
 .botao-arquivo { display: block; text-align: center; border: 1px solid var(--acento); color: var(--acento); border-radius: 10px; padding: 10px 14px; margin: 0; font-size: 1rem; cursor: pointer; }
+
+/* Apelidos */
+.aviso .link { background: transparent; color: var(--acento); font-weight: 600; padding: 0 0 0 8px; text-decoration: underline; }
+.vazio p { margin-bottom: 4px; }
+.item { padding-left: 0; }
+.refeicao .item { padding-left: 28px; }

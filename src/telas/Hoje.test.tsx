@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import App from '../App'
 import { abrirBanco, type Banco } from '../db/banco'
-import { addRefeicao, criarAlimento, refeicoesDoDia, salvarPerfil } from '../db/repos'
+import { addRefeicao, buscarAlimentos, criarAlimento, refeicoesDoDia, salvarPerfil } from '../db/repos'
 import { gastoDia, metaConsumo } from '../calc/energia'
 
 const perfil = { alturaCm: 175, pesoKg: 80, idade: 25, sexo: 'M' as const, deficitMeta: 300 }
@@ -134,4 +134,21 @@ test('app aberto de um dia pro outro: depois das 5h a tela vai pro novo dia', as
   await u.click(screen.getByRole('button', { name: 'Adicionar' }))
   expect(refeicoesDoDia(b, HOJE)).toHaveLength(1)
   expect(refeicoesDoDia(b, ONTEM)).toHaveLength(0)
+})
+
+test('ensinar um apelido quando a busca não encontra nada', async () => {
+  await salvarPerfil(b, perfil)
+  const u = userEvent.setup()
+  render(<App banco={b} />)
+  await u.click(await screen.findByRole('button', { name: 'Adicionar em Almoço' }))
+  await u.type(screen.getByPlaceholderText('Buscar alimento'), 'marmita da vó')
+  expect(await screen.findByText('Nada encontrado.')).toBeInTheDocument()
+  await u.click(screen.getByRole('button', { name: 'Ensinar "marmita da vó"' }))
+  expect(screen.getByText('Procure o alimento que "marmita da vó" quer dizer')).toBeInTheDocument()
+  expect(screen.getByPlaceholderText('Buscar alimento')).toHaveValue('')
+  await u.type(screen.getByPlaceholderText('Buscar alimento'), 'arroz')
+  await u.click(await screen.findByText('Arroz'))
+  expect(screen.getByLabelText('Gramas')).toBeInTheDocument()
+  await u.click(screen.getByRole('button', { name: 'Adicionar' }))
+  expect(buscarAlimentos(b, 'marmita da vo')[0]?.nome).toBe('Arroz')
 })

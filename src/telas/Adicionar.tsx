@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { parseGramas } from '../calc/datas'
-import { addRefeicao, buscarAlimentos, criarAlimento, type Alimento, type TipoRefeicao } from '../db/repos'
+import { addRefeicao, adicionarApelido, buscarAlimentos, criarAlimento, type Alimento, type TipoRefeicao } from '../db/repos'
 import { useBanco } from '../estado'
 import { NOMES_REFEICAO } from '../refeicoes'
 
@@ -14,6 +14,8 @@ export function Adicionar({ data, tipo, fechar }: Props) {
   const [escolhido, setEscolhido] = useState<Alimento | null>(null)
   const [gramasTxt, setGramasTxt] = useState('100')
   const [cadastrando, setCadastrando] = useState(false)
+  /** Termo que o usuário está ensinando: o próximo alimento escolhido recebe esse apelido. */
+  const [ensinando, setEnsinando] = useState<string | null>(null)
 
   useEffect(() => {
     const t = setTimeout(() => setTermoBusca(termo), 150)
@@ -22,6 +24,20 @@ export function Adicionar({ data, tipo, fechar }: Props) {
 
   const resultados = useMemo(() => buscarAlimentos(banco, termoBusca), [banco, termoBusca])
   const gramas = parseGramas(gramasTxt)
+
+  async function escolher(a: Alimento) {
+    if (ensinando) {
+      await adicionarApelido(banco, a.id, ensinando)
+      setEnsinando(null)
+    }
+    setEscolhido(a)
+  }
+
+  function ensinar() {
+    setEnsinando(termoBusca.trim())
+    setTermo('')
+    setTermoBusca('')
+  }
 
   async function confirmar() {
     if (!escolhido || gramas === null) return
@@ -33,11 +49,11 @@ export function Adicionar({ data, tipo, fechar }: Props) {
   if (cadastrando) {
     return (
       <NovoAlimento
-        nomeInicial={termo}
+        nomeInicial={termo || ensinando || ''}
         voltar={() => setCadastrando(false)}
         criado={async (a) => {
           const id = await criarAlimento(banco, a)
-          setEscolhido({ ...a, id })
+          await escolher({ ...a, id })
           setCadastrando(false)
         }}
       />
@@ -67,6 +83,12 @@ export function Adicionar({ data, tipo, fechar }: Props) {
         </div>
       ) : (
         <>
+          {ensinando && (
+            <p className="aviso" role="status">
+              Procure o alimento que "{ensinando}" quer dizer
+              <button className="link" onClick={() => setEnsinando(null)}>Cancelar</button>
+            </p>
+          )}
           <input
             className="busca" placeholder="Buscar alimento" value={termo} autoFocus
             onChange={(e) => setTermo(e.target.value)}
@@ -74,14 +96,21 @@ export function Adicionar({ data, tipo, fechar }: Props) {
           <ul className="resultados">
             {resultados.map((a) => (
               <li key={a.id}>
-                <button onClick={() => setEscolhido(a)}>
+                <button onClick={() => escolher(a)}>
                   <span>{a.nome}</span>
                   <small>{a.kcal100g} kcal/100 g</small>
                 </button>
               </li>
             ))}
           </ul>
-          {termoBusca && resultados.length === 0 && <p className="vazio">Nada encontrado.</p>}
+          {termoBusca && resultados.length === 0 && (
+            <div className="vazio">
+              <p>Nada encontrado.</p>
+              {!ensinando && (
+                <button className="secundario largo" onClick={ensinar}>Ensinar "{termoBusca.trim()}"</button>
+              )}
+            </div>
+          )}
           <button className="secundario largo" onClick={() => setCadastrando(true)}>+ Cadastrar alimento</button>
         </>
       )}
