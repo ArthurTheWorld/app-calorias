@@ -7,7 +7,8 @@ import { gastoDia, metaConsumo, type Perfil } from '../calc/energia'
 import { resumirDias } from '../calc/historico'
 import { diaN, nivel, xpTotal } from '../calc/jogo'
 import { fechamentoOntem, painel } from '../calc/painel'
-import { diasDoJogo, refeicoesDoDia, removerRefeicao, totaisPorDia, treinosDoDia } from '../db/repos'
+import { diasDoJogo, pesosRegistrados, refeicoesDoDia, removerRefeicao, totaisPorDia, treinosDoDia } from '../db/repos'
+import { perfilNaData } from '../calc/peso'
 import { useBanco } from '../estado'
 import { NOMES_REFEICAO, TIPOS_REFEICAO, type TipoRefeicao } from '../refeicoes'
 import { useHojeApp } from '../useHojeApp'
@@ -48,15 +49,17 @@ export function Hoje({ perfil }: { perfil: Perfil }) {
   const refeicoes = useMemo(() => refeicoesDoDia(banco, data), [banco, data, versao])
   const treinos = useMemo(() => treinosDoDia(banco, data), [banco, data, versao])
   const dias = useMemo(() => diasDoJogo(banco), [banco, versao])
+  const pesos = useMemo(() => pesosRegistrados(banco), [banco, versao])
   const resumos = useMemo(
-    () => resumirDias(perfil, totaisPorDia(banco, '0000-01-01', '9999-12-31')),
-    [banco, perfil, versao],
+    () => resumirDias(perfil, totaisPorDia(banco, '0000-01-01', '9999-12-31'), pesos),
+    [banco, perfil, pesos, versao],
   )
 
   const kcalTreinos = treinos.reduce((s, t) => s + t.kcal, 0)
   const consumido = refeicoes.reduce((s, r) => s + r.kcal, 0)
-  const meta = metaConsumo(perfil, kcalTreinos)
-  const gasto = gastoDia(perfil, kcalTreinos)
+  const perfilDoDia = perfilNaData(perfil, pesos, data)
+  const meta = metaConsumo(perfilDoDia, kcalTreinos)
+  const gasto = gastoDia(perfilDoDia, kcalTreinos)
   const ehHoje = data === hoje
 
   if (adicionando) {

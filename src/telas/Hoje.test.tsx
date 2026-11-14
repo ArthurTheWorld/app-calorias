@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import App from '../App'
 import { abrirBanco, type Banco } from '../db/banco'
-import { addRefeicao, buscarAlimentos, criarAlimento, refeicoesDoDia, salvarPerfil } from '../db/repos'
+import { addRefeicao, buscarAlimentos, criarAlimento, refeicoesDoDia, registrarPeso, salvarPerfil } from '../db/repos'
 import { gastoDia, metaConsumo } from '../calc/energia'
 
 const perfil = { alturaCm: 175, pesoKg: 80, idade: 25, sexo: 'M' as const, deficitMeta: 300 }
@@ -171,4 +171,15 @@ test('ensinar: o campo fica focado, e uma escolha errada desfeita com Trocar nã
   await u.click(await screen.findByText('Arroz'))
   await u.click(screen.getByRole('button', { name: 'Adicionar' }))
   expect(buscarAlimentos(b, 'marmita').map((a) => a.nome)).toEqual(['Arroz'])
+})
+
+test('dia antigo usa o peso daquele dia', async () => {
+  await salvarPerfil(b, perfil)
+  await registrarPeso(b, '2026-11-01', 90)
+  await registrarPeso(b, HOJE, 80)
+  const u = userEvent.setup()
+  render(<App banco={b} />)
+  expect(await screen.findByTestId('gasto')).toHaveTextContent(String(Math.round(gastoDia({ ...perfil, pesoKg: 80 }, 0))))
+  await u.click(screen.getByRole('button', { name: 'Dia anterior' }))
+  expect(screen.getByTestId('gasto')).toHaveTextContent(String(Math.round(gastoDia({ ...perfil, pesoKg: 90 }, 0))))
 })

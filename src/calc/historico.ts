@@ -1,5 +1,7 @@
 import { somarDias } from './datas'
 import { gastoDia, type Perfil } from './energia'
+import { perfilNaData } from './peso'
+import type { RegistroPeso } from '../db/repos'
 
 export interface DiaResumo {
   data: string
@@ -16,15 +18,16 @@ export interface ResumoMes {
   mediaConsumo: number
 }
 
-/** Só dias com alguma refeição registrada entram no histórico. */
+/** Só dias com alguma refeição registrada entram no histórico. Cada dia usa o peso da sua data. */
 export function resumirDias(
   p: Perfil,
   totais: { data: string; consumido: number; treinos: number }[],
+  pesos: RegistroPeso[] = [],
 ): DiaResumo[] {
   return totais
     .filter((t) => t.consumido > 0)
     .map((t) => {
-      const gasto = gastoDia(p, t.treinos)
+      const gasto = gastoDia(perfilNaData(p, pesos, t.data), t.treinos)
       return { data: t.data, consumido: t.consumido, gasto, deficit: gasto - t.consumido, emDeficit: t.consumido < gasto }
     })
 }

@@ -5,7 +5,7 @@ import type { Perfil } from '../calc/energia'
 import { resumirDias, resumoMes, streak } from '../calc/historico'
 import { conquistas } from '../calc/conquistas'
 import { Icone } from '../componentes/Icone'
-import { diasDoJogo, totaisPorDia } from '../db/repos'
+import { diasDoJogo, pesosRegistrados, totaisPorDia } from '../db/repos'
 import { useBanco } from '../estado'
 
 const MESES = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro']
@@ -22,8 +22,11 @@ export function Historico({ perfil }: { perfil: Perfil }) {
   const hoje = useHojeApp()
   const [mes, setMes] = useState(hoje.slice(0, 7))
 
-  // Usa o perfil atual para todos os dias (peso antigo não é guardado na v1).
-  const dias = useMemo(() => resumirDias(perfil, totaisPorDia(banco, '0000-01-01', '9999-12-31')), [banco, perfil, versao])
+  // Cada dia usa o peso registrado para a sua data.
+  const dias = useMemo(
+    () => resumirDias(perfil, totaisPorDia(banco, '0000-01-01', '9999-12-31'), pesosRegistrados(banco)),
+    [banco, perfil, versao],
+  )
   const porData = useMemo(() => new Map(dias.map((d) => [d.data, d])), [dias])
   // Hoje ainda está aberto: só dias fechados contam para a sequência.
   const s = streak(dias.filter((d) => d.data < hoje), hoje)
