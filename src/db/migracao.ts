@@ -1,5 +1,5 @@
 import type { Database } from 'sql.js'
-import { hojeLocal } from '../calc/datas'
+import { hojeApp } from '../calc/datas'
 import { TIPOS_REFEICAO } from '../refeicoes'
 
 export const VERSAO_BANCO = 4
@@ -46,7 +46,7 @@ export function migrar(db: Database): void {
     }
     if (versao < 4) {
       const primeiro = (db.exec(`SELECT MIN(data) FROM (SELECT data FROM refeicoes UNION SELECT data FROM treinos)`)[0]
-        ?.values[0][0] as string | null | undefined) ?? hojeLocal()
+        ?.values[0][0] as string | null | undefined) ?? hojeApp()
       db.run(
         `INSERT INTO pesos (data, peso_kg) SELECT ?, peso_kg FROM perfil
          WHERE id = 1 AND NOT EXISTS (SELECT 1 FROM pesos)`,

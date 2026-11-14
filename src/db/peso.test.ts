@@ -1,4 +1,4 @@
-import { beforeEach, expect, test } from 'vitest'
+import { beforeEach, expect, test, vi } from 'vitest'
 import { abrirBanco, carregarSql, consultar, type Banco } from './banco'
 import { getPerfil, pesosRegistrados, registrarPeso, removerPeso, salvarPerfil } from './repos'
 import { tabelaParaCsv } from '../exportar'
@@ -64,4 +64,20 @@ test('migração v3 → v4 sem perfil deixa pesos vazia', async () => {
   const m = await abrirBanco(await bancoV3(false))
   expect(versao(m)).toBe(4)
   expect(pesosRegistrados(m)).toHaveLength(0)
+})
+
+test('migração de madrugada sem registros usa o dia do app', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date(2026, 10, 15, 2, 0))
+  try {
+    const SQL = await carregarSql()
+    const base = await abrirBanco()
+    base.db.run('DROP TABLE pesos')
+    base.db.run('PRAGMA user_version = 3')
+    base.db.run(`INSERT INTO perfil VALUES (1, 178, 82, 30, 'M', 500)`)
+    const m = await abrirBanco(new SQL.Database(base.exportar()).export())
+    expect(pesosRegistrados(m).map((p) => p.data)).toEqual(['2026-11-14'])
+  } finally {
+    vi.useRealTimers()
+  }
 })
