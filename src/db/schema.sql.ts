@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS alimentos (
 CREATE TABLE IF NOT EXISTS refeicoes (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   data TEXT NOT NULL,
-  tipo TEXT NOT NULL CHECK (tipo IN ('cafe','almoco','jantar','lanche')),
+  tipo TEXT NOT NULL CHECK (tipo IN ('cafe','almoco','lanche','jantar','madrugada')),
   alimento_id INTEGER NOT NULL REFERENCES alimentos(id),
   gramas REAL NOT NULL CHECK (gramas > 0),
   kcal REAL NOT NULL

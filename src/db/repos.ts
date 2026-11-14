@@ -1,7 +1,8 @@
 import type { Perfil } from '../calc/energia'
 import { consultar, type Banco } from './banco'
 
-export type TipoRefeicao = 'cafe' | 'almoco' | 'jantar' | 'lanche'
+import type { TipoRefeicao } from '../refeicoes'
+export type { TipoRefeicao }
 
 export interface Alimento {
   id: number

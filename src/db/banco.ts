@@ -1,6 +1,7 @@
 import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js'
 import { get, set } from 'idb-keyval'
 import { SCHEMA } from './schema.sql'
+import { migrar } from './migracao'
 
 const CHAVE_IDB = 'banco'
 let sqlPromise: Promise<SqlJsStatic> | null = null
@@ -30,6 +31,7 @@ export async function abrirBanco(dados?: Uint8Array): Promise<Banco> {
   const db = new SQL.Database(dados)
   db.run('PRAGMA foreign_keys = ON;')
   db.exec(SCHEMA)
+  migrar(db)
   return {
     db,
     salvar: () => set(CHAVE_IDB, db.export()),

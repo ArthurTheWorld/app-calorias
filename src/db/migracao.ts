@@ -1,0 +1,43 @@
+import type { Database } from 'sql.js'
+import { TIPOS_REFEICAO } from '../refeicoes'
+
+export const VERSAO_BANCO = 2
+
+const CHECK_TIPOS = TIPOS_REFEICAO.map((t) => `'${t}'`).join(',')
+
+/**
+ * Leva o banco para a versão atual. v1 → v2: a tabela `refeicoes` é reconstruída
+ * para aceitar 'madrugada' (SQLite não altera CHECK). Roda numa transação.
+ */
+export function migrar(db: Database): void {
+  const versao = db.exec('PRAGMA user_version')[0].values[0][0] as number
+  if (versao >= VERSAO_BANCO) return
+
+  const sql = db.exec(`SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'refeicoes'`)[0]
+    ?.values[0][0] as string | undefined
+  const precisaRecriar = sql !== undefined && !sql.includes("'madrugada'")
+
+  db.run('BEGIN')
+  try {
+    if (precisaRecriar) {
+      db.run(`CREATE TABLE refeicoes_nova (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        data TEXT NOT NULL,
+        tipo TEXT NOT NULL CHECK (tipo IN (${CHECK_TIPOS})),
+        alimento_id INTEGER NOT NULL REFERENCES alimentos(id),
+        gramas REAL NOT NULL CHECK (gramas > 0),
+        kcal REAL NOT NULL
+      )`)
+      db.run(`INSERT INTO refeicoes_nova (id, data, tipo, alimento_id, gramas, kcal)
+              SELECT id, data, tipo, alimento_id, gramas, kcal FROM refeicoes`)
+      db.run('DROP TABLE refeicoes')
+      db.run('ALTER TABLE refeicoes_nova RENAME TO refeicoes')
+      db.run('CREATE INDEX IF NOT EXISTS idx_refeicoes_data ON refeicoes(data)')
+    }
+    db.run(`PRAGMA user_version = ${VERSAO_BANCO}`)
+    db.run('COMMIT')
+  } catch (e) {
+    db.run('ROLLBACK')
+    throw e
+  }
+}
