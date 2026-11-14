@@ -133,3 +133,34 @@ test('último registro de 1000 g reabre como 1000, não 1', async () => {
   await abrir('ovo', OVO)
   expect(screen.getByLabelText('Gramas')).toHaveValue('1000')
 })
+
+test('quantidade fracionária reabre exata (0,25), sem arredondar', async () => {
+  const cafe = porcoesDoAlimento(b, 1)[0]
+  await addRefeicao(b, { data: HOJE, tipo: 'cafe', alimentoId: cafe.alimentoId, gramas: 45, qtd: 0.25, porcao: cafe.nome })
+  await abrir('café', 'Café, infusão 10%')
+  expect(screen.getByLabelText('Quantidade')).toHaveValue('0,25')
+  expect(total()).toHaveTextContent('45 g')
+})
+
+test('Trocar de alimento não carrega a quantidade do anterior', async () => {
+  await addRefeicao(b, { data: HOJE, tipo: 'cafe', alimentoId: ovo, gramas: 150, qtd: 3, porcao: 'Unidade' })
+  await addRefeicao(b, { data: HOJE, tipo: 'cafe', alimentoId: 1, gramas: 80 })
+  const u = await abrir('ovo', OVO)
+  expect(screen.getByLabelText('Quantidade')).toHaveValue('3')
+  await u.click(screen.getByRole('button', { name: 'Trocar' }))
+  await u.clear(screen.getByPlaceholderText('Buscar alimento'))
+  await u.type(screen.getByPlaceholderText('Buscar alimento'), 'café')
+  await u.click(await screen.findByText('Café, infusão 10%'))
+  expect(screen.getByLabelText('Gramas')).toHaveValue('80')
+  await u.click(screen.getByRole('radio', { name: 'Xícara (180 ml)' }))
+  expect(screen.getByLabelText('Quantidade')).toHaveValue('1')
+})
+
+test('− abaixo de 1 não aumenta a quantidade', async () => {
+  const u = await abrir('ovo', OVO)
+  const q = screen.getByLabelText('Quantidade')
+  await u.clear(q)
+  await u.type(q, '0,5')
+  await u.click(screen.getByRole('button', { name: 'Menos' }))
+  expect(q).toHaveValue('0,5')
+})

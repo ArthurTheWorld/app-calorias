@@ -15,11 +15,11 @@ import { useHojeApp } from '../useHojeApp'
 import { Adicionar } from './Adicionar'
 import type { RefeicaoView } from '../db/repos'
 
-const br = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 1, useGrouping: false })
+const br = (n: number, casas = 1) => n.toLocaleString('pt-BR', { maximumFractionDigits: casas, useGrouping: false })
 
 /** "2 × Fatia · 50 g" quando registrado por porção; "50 g" quando em gramas. */
 const medida = (r: RefeicaoView) =>
-  r.porcao && r.qtd !== null ? `${br(r.qtd)} × ${r.porcao} · ${br(r.gramas)} g` : `${br(r.gramas)} g`
+  r.porcao && r.qtd !== null ? `${br(r.qtd, 3)} × ${r.porcao} · ${br(r.gramas)} g` : `${br(r.gramas)} g`
 
 export function rotuloData(data: string): string {
   const hoje = hojeApp()

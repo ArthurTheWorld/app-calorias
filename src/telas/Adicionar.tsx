@@ -11,7 +11,8 @@ import { NOMES_REFEICAO } from '../refeicoes'
 /** Medida escolhida: gramas direto ou uma porção (pelo id). */
 type Selecao = { tipo: 'gramas' } | { tipo: 'porcao'; id: number }
 
-const num = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 1, useGrouping: false })
+/** Número para os campos: vírgula, até 3 casas (0,25 xícara volta 0,25), sem separador de milhar. */
+const num = (n: number) => n.toLocaleString('pt-BR', { maximumFractionDigits: 3, useGrouping: false })
 
 interface Props { data: string; tipo: TipoRefeicao; fechar: (salvou?: boolean) => void }
 
@@ -50,6 +51,9 @@ export function Adicionar({ data, tipo, fechar }: Props) {
     setPorcoes(ps)
     setEscolhido(a)
     setCriandoPorcao(false)
+    // Começa limpo: nada da quantidade ou dos gramas do alimento anterior.
+    setQtdTxt('1')
+    setGramasTxt('100')
     const daVez = u?.porcao ? [...ps].reverse().find((p) => p.nome === u.porcao) : undefined
     if (daVez) {
       setSel({ tipo: 'porcao', id: daVez.id })
@@ -66,10 +70,11 @@ export function Adicionar({ data, tipo, fechar }: Props) {
     }
   }
 
-  /** + e − andam de 1 em 1; − não desce abaixo de 1. Texto inválido: + vira 1. */
+  /** + e − andam de 1 em 1; − não desce abaixo de 1 (e nunca aumenta). Texto inválido: vira 1. */
   function passo(delta: 1 | -1) {
     const q = parseGramas(qtdTxt)
     if (q === null) return setQtdTxt('1')
+    if (delta < 0 && q <= 1) return
     setQtdTxt(num(delta > 0 ? Math.floor(q) + 1 : Math.max(1, Math.ceil(q) - 1)))
   }
 
