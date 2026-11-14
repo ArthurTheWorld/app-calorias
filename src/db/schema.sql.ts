@@ -43,4 +43,9 @@ CREATE TABLE IF NOT EXISTS apelidos (
   UNIQUE (alimento_id, termo_busca, origem)
 );
 CREATE INDEX IF NOT EXISTS idx_apelidos_termo ON apelidos(termo_busca);
+CREATE TABLE IF NOT EXISTS pesos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  data TEXT NOT NULL UNIQUE,
+  peso_kg REAL NOT NULL CHECK (peso_kg BETWEEN 30 AND 300)
+);
 `

@@ -46,16 +46,16 @@ test('banco v1 migra sem perder registros e aceita madrugada', async () => {
   ])
   await addRefeicao(b, { data: '2026-11-13', tipo: 'madrugada', alimentoId: 1, gramas: 50 })
   expect(refeicoesDoDia(b, '2026-11-13')).toHaveLength(5)
-  expect(versao(b)).toBe(3)
+  expect(versao(b)).toBe(4)
 
   const b2 = await abrirBanco(b.exportar())
   expect(refeicoesDoDia(b2, '2026-11-13')).toHaveLength(5)
-  expect(versao(b2)).toBe(3)
+  expect(versao(b2)).toBe(4)
 })
 
 test('banco novo aceita madrugada e recusa tipo inválido', async () => {
   const b = await abrirBanco()
-  expect(versao(b)).toBe(3)
+  expect(versao(b)).toBe(4)
   const id = await criarAlimento(b, { nome: 'X', kcal100g: 100, proteinaG: 0, carboG: 0, gorduraG: 0, origem: 'custom' })
   await addRefeicao(b, { data: '2026-11-13', tipo: 'madrugada', alimentoId: id, gramas: 50 })
   expect(() => b.db.run(
@@ -77,7 +77,7 @@ test('banco v2 (sem apelidos) vira v3 e aceita apelidos', async () => {
   const db = new SQL.Database(await bancoV1())
   db.run('PRAGMA user_version = 2')
   const b = await abrirBanco(db.export())
-  expect(versao(b)).toBe(3)
+  expect(versao(b)).toBe(4)
   await adicionarApelido(b, 1, 'marmita')
   expect(apelidosDoUsuario(b)).toHaveLength(1)
 })

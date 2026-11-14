@@ -233,3 +233,35 @@ export async function removerApelido(b: Banco, id: number): Promise<void> {
   b.db.run(`DELETE FROM apelidos WHERE id = ? AND origem = 'usuario'`, [id])
   await b.salvar()
 }
+
+// ---- pesos
+export interface RegistroPeso { id: number; data: string; pesoKg: number }
+
+export function pesosRegistrados(b: Banco): RegistroPeso[] {
+  return consultar<RegistroPeso>(b, 'SELECT id, data, peso_kg AS pesoKg FROM pesos ORDER BY data')
+}
+
+/** Mantém perfil.peso_kg igual ao registro mais recente. */
+function sincronizarPesoDoPerfil(b: Banco): void {
+  b.db.run('UPDATE perfil SET peso_kg = (SELECT peso_kg FROM pesos ORDER BY data DESC LIMIT 1) WHERE EXISTS (SELECT 1 FROM pesos)')
+}
+
+/** Registra o peso de um dia; registrar de novo no mesmo dia substitui. */
+export async function registrarPeso(b: Banco, data: string, pesoKg: number): Promise<void> {
+  b.db.run(
+    'INSERT INTO pesos (data, peso_kg) VALUES (?, ?) ON CONFLICT(data) DO UPDATE SET peso_kg = excluded.peso_kg',
+    [data, pesoKg],
+  )
+  sincronizarPesoDoPerfil(b)
+  await b.salvar()
+}
+
+/** Apaga um registro. O último restante não pode ser apagado (devolve false). */
+export async function removerPeso(b: Banco, id: number): Promise<boolean> {
+  const [{ n }] = consultar<{ n: number }>(b, 'SELECT COUNT(*) AS n FROM pesos')
+  if (n <= 1) return false
+  b.db.run('DELETE FROM pesos WHERE id = ?', [id])
+  sincronizarPesoDoPerfil(b)
+  await b.salvar()
+  return true
+}
