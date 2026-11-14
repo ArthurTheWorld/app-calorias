@@ -22,5 +22,5 @@ test('registrar treino sugere kcal e aumenta o gasto do dia', async () => {
   await u.click(screen.getByRole('button', { name: 'Registrar treino' }))
   expect(await screen.findByText(/Musculação · 60 min · 400 kcal/)).toBeInTheDocument()
   await u.click(screen.getByRole('button', { name: 'Hoje' }))
-  expect(await screen.findByText(String(Math.round(gastoDia(perfil, 400))))).toBeInTheDocument()
+  expect(await screen.findByTestId('gasto')).toHaveTextContent(String(Math.round(gastoDia(perfil, 400))))
 })

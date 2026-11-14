@@ -97,7 +97,7 @@ function Dados() {
             onChange={(e) => { const f = e.target.files?.[0]; if (f) importar(f); e.target.value = '' }} />
         </label>
       </div>
-      {msg && <p className="status ruim">{msg}</p>}
+      {msg && <p className="status">{msg}</p>}
     </div>
   )
 }

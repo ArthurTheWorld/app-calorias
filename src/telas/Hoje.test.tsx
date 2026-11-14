@@ -1,28 +1,47 @@
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { beforeEach, expect, test } from 'vitest'
+import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import App from '../App'
 import { abrirBanco, type Banco } from '../db/banco'
-import { addRefeicao, criarAlimento, salvarPerfil } from '../db/repos'
-import { hojeLocal } from '../calc/datas'
-import { metaConsumo } from '../calc/energia'
+import { addRefeicao, criarAlimento, refeicoesDoDia, salvarPerfil } from '../db/repos'
+import { gastoDia, metaConsumo } from '../calc/energia'
 
 const perfil = { alturaCm: 175, pesoKg: 80, idade: 25, sexo: 'M' as const, deficitMeta: 300 }
+const HOJE = '2026-11-14' // sábado
+const ONTEM = '2026-11-13'
 let b: Banco
-beforeEach(async () => { b = await abrirBanco() })
+let arroz: number
+
+beforeEach(async () => {
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date(2026, 10, 14, 15, 0))
+  b = await abrirBanco()
+  arroz = await criarAlimento(b, { nome: 'Arroz', kcal100g: 128, proteinaG: 0, carboG: 0, gorduraG: 0, origem: 'custom' })
+})
+afterEach(() => { vi.useRealTimers() })
 
 test('sem perfil abre o Perfil', async () => {
   render(<App banco={b} />)
   expect(await screen.findByRole('heading', { name: 'Seu perfil' })).toBeInTheDocument()
 })
 
-test('Hoje mostra consumido e restante', async () => {
+test('Hoje mostra consumido, restante e gasto', async () => {
   await salvarPerfil(b, perfil)
-  const id = await criarAlimento(b, { nome: 'Arroz', kcal100g: 128, proteinaG: 0, carboG: 0, gorduraG: 0, origem: 'custom' })
-  await addRefeicao(b, { data: hojeLocal(), tipo: 'almoco', alimentoId: id, gramas: 150 })
+  await addRefeicao(b, { data: HOJE, tipo: 'almoco', alimentoId: arroz, gramas: 150 })
   render(<App banco={b} />)
   expect(await screen.findByTestId('consumido')).toHaveTextContent('192')
   expect(screen.getByTestId('restante')).toHaveTextContent(String(Math.round(metaConsumo(perfil, 0) - 192)))
+  expect(screen.getByTestId('gasto')).toHaveTextContent(String(Math.round(gastoDia(perfil, 0))))
+})
+
+test('refeições na ordem do dia, com Madrugada', async () => {
+  await salvarPerfil(b, perfil)
+  render(<App banco={b} />)
+  const botoes = await screen.findAllByRole('button', { name: /^Adicionar em / })
+  expect(botoes.map((x) => x.getAttribute('aria-label'))).toEqual([
+    'Adicionar em Café da manhã', 'Adicionar em Almoço', 'Adicionar em Lanche da tarde',
+    'Adicionar em Jantar', 'Adicionar em Madrugada',
+  ])
 })
 
 test('adicionar alimento pela busca', async () => {
@@ -41,4 +60,61 @@ test('adicionar alimento pela busca', async () => {
   await u.type(gramas, '200')
   await u.click(screen.getByRole('button', { name: 'Adicionar' }))
   expect(await screen.findByTestId('consumido')).toHaveTextContent('196')
+})
+
+test('Madrugada registrada de manhã vai pro dia anterior, com aviso', async () => {
+  vi.setSystemTime(new Date(2026, 10, 14, 9, 0))
+  await salvarPerfil(b, perfil)
+  const u = userEvent.setup()
+  render(<App banco={b} />)
+  await u.click(await screen.findByRole('button', { name: 'Adicionar em Madrugada' }))
+  await u.type(screen.getByPlaceholderText('Buscar alimento'), 'arroz')
+  await u.click(await screen.findByText('Arroz'))
+  await u.click(screen.getByRole('button', { name: 'Adicionar' }))
+  expect(await screen.findByText('Salvo na madrugada de sexta')).toBeInTheDocument()
+  expect(screen.getByTestId('consumido')).toHaveTextContent('0')
+  expect(refeicoesDoDia(b, ONTEM)).toHaveLength(1)
+})
+
+test('painel de status com xp, nível e fechamento de ontem', async () => {
+  await salvarPerfil(b, perfil)
+  await addRefeicao(b, { data: ONTEM, tipo: 'cafe', alimentoId: arroz, gramas: 100 })
+  await addRefeicao(b, { data: ONTEM, tipo: 'almoco', alimentoId: arroz, gramas: 100 })
+  render(<App banco={b} />)
+  expect(await screen.findByText('LV 1 · 20 XP')).toBeInTheDocument()
+  expect(screen.getByTestId('sequencia')).toHaveTextContent('1')
+  expect(screen.getByTestId('recorde')).toHaveTextContent('1')
+  expect(screen.getByTestId('registros')).toHaveTextContent('1/14')
+  expect(screen.getByTestId('ontem')).not.toHaveTextContent('—')
+  expect(screen.getByTestId('fechamento')).toHaveTextContent(/^Ontem:/)
+  expect(screen.getByText('DIA 2')).toBeInTheDocument()
+})
+
+test('sem histórico: traços, sem fechamento, nada desbloqueado', async () => {
+  await salvarPerfil(b, perfil)
+  render(<App banco={b} />)
+  expect(await screen.findByTestId('media7')).toHaveTextContent('—')
+  expect(screen.getByTestId('ontem')).toHaveTextContent('—')
+  expect(screen.queryByTestId('fechamento')).toBeNull()
+  expect(screen.getByText('DIA 1')).toBeInTheDocument()
+  expect(document.body.textContent).not.toMatch(/NaN/)
+})
+
+test('acima da meta: âmbar, sem vermelho', async () => {
+  await salvarPerfil(b, perfil)
+  await addRefeicao(b, { data: HOJE, tipo: 'jantar', alimentoId: arroz, gramas: 3000 })
+  const { container } = render(<App banco={b} />)
+  expect(await screen.findByTestId('restante')).toHaveClass('acima')
+  expect(container.querySelector('[class*="ruim"], [class*="vermelho"]')).toBeNull()
+})
+
+test('dia anterior mostra energia e refeições, sem painel', async () => {
+  await salvarPerfil(b, perfil)
+  await addRefeicao(b, { data: ONTEM, tipo: 'almoco', alimentoId: arroz, gramas: 100 })
+  const u = userEvent.setup()
+  render(<App banco={b} />)
+  await u.click(await screen.findByRole('button', { name: 'Dia anterior' }))
+  expect(screen.getByTestId('consumido')).toHaveTextContent('128')
+  expect(screen.queryByTestId('sequencia')).toBeNull()
+  expect(screen.queryByTestId('fechamento')).toBeNull()
 })

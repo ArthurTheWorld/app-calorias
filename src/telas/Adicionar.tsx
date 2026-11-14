@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { parseGramas } from '../calc/datas'
 import { addRefeicao, buscarAlimentos, criarAlimento, type Alimento, type TipoRefeicao } from '../db/repos'
 import { useBanco } from '../estado'
-import { NOMES_REFEICAO } from './Hoje'
+import { NOMES_REFEICAO } from '../refeicoes'
 
-interface Props { data: string; tipo: TipoRefeicao; fechar: () => void }
+/** `fechar(true)` quando a refeição foi salva; `fechar()` ao voltar sem salvar. */
+interface Props { data: string; tipo: TipoRefeicao; fechar: (salvou?: boolean) => void }
 
 export function Adicionar({ data, tipo, fechar }: Props) {
   const { banco, mudou } = useBanco()
@@ -26,7 +27,7 @@ export function Adicionar({ data, tipo, fechar }: Props) {
     if (!escolhido || gramas === null) return
     await addRefeicao(banco, { data, tipo, alimentoId: escolhido.id, gramas })
     mudou()
-    fechar()
+    fechar(true)
   }
 
   if (cadastrando) {
@@ -46,7 +47,7 @@ export function Adicionar({ data, tipo, fechar }: Props) {
   return (
     <section>
       <header className="barra">
-        <button onClick={fechar} aria-label="Voltar">‹</button>
+        <button onClick={() => fechar()} aria-label="Voltar">‹</button>
         <h1>{NOMES_REFEICAO[tipo]}</h1>
       </header>
 

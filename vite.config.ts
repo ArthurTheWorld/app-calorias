@@ -14,8 +14,8 @@ export default defineConfig({
         short_name: 'Calorias',
         description: 'Contador de calorias pessoal',
         lang: 'pt-BR',
-        theme_color: '#1f9d6b',
-        background_color: '#f4f6f5',
+        theme_color: '#000000',
+        background_color: '#000000',
         display: 'standalone',
         orientation: 'portrait',
         icons: [
