@@ -153,3 +153,40 @@ export function totaisPorDia(b: Banco, de: string, ate: string): TotalDia[] {
     [de, ate],
   )
 }
+
+// ---- jogo
+export interface DiaJogo {
+  data: string
+  kcalPorTipo: Partial<Record<TipoRefeicao, number>>
+  consumido: number
+  treinosKcal: number
+  qtdTreinos: number
+}
+
+/** Todos os dias com refeição ou treino, em ordem de data. */
+export function diasDoJogo(b: Banco): DiaJogo[] {
+  const porData = new Map<string, DiaJogo>()
+  const pegar = (data: string) => {
+    let d = porData.get(data)
+    if (!d) {
+      d = { data, kcalPorTipo: {}, consumido: 0, treinosKcal: 0, qtdTreinos: 0 }
+      porData.set(data, d)
+    }
+    return d
+  }
+  for (const r of consultar<{ data: string; tipo: TipoRefeicao; kcal: number }>(
+    b, 'SELECT data, tipo, SUM(kcal) AS kcal FROM refeicoes GROUP BY data, tipo',
+  )) {
+    const d = pegar(r.data)
+    d.kcalPorTipo[r.tipo] = r.kcal
+    d.consumido += r.kcal
+  }
+  for (const t of consultar<{ data: string; kcal: number; qtd: number }>(
+    b, 'SELECT data, SUM(kcal) AS kcal, COUNT(*) AS qtd FROM treinos GROUP BY data',
+  )) {
+    const d = pegar(t.data)
+    d.treinosKcal = t.kcal
+    d.qtdTreinos = t.qtd
+  }
+  return [...porData.values()].sort((a, c) => a.data.localeCompare(c.data))
+}

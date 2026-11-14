@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, test } from 'vitest'
 import { abrirBanco, type Banco } from './banco'
 import {
-  addRefeicao, addTreino, buscarAlimentos, criarAlimento, getPerfil,
+  addRefeicao, addTreino, buscarAlimentos, criarAlimento, diasDoJogo, getPerfil,
   refeicoesDoDia, removerRefeicao, salvarPerfil, totaisPorDia, treinosDoDia,
 } from './repos'
 
@@ -56,4 +56,20 @@ describe('repos', () => {
     const b2 = await abrirBanco(b.exportar())
     expect(buscarAlimentos(b2, 'arroz')).toHaveLength(1)
   })
+})
+
+test('diasDoJogo agrupa refeições por tipo e treinos por dia', async () => {
+  const id = await criarAlimento(b, arroz)
+  await addRefeicao(b, { data: '2026-11-13', tipo: 'almoco', alimentoId: id, gramas: 100 })
+  await addRefeicao(b, { data: '2026-11-13', tipo: 'almoco', alimentoId: id, gramas: 100 })
+  await addRefeicao(b, { data: '2026-11-13', tipo: 'jantar', alimentoId: id, gramas: 100 })
+  await addTreino(b, { data: '2026-11-14', tipo: 'Corrida', duracaoMin: 30, kcal: 300 })
+  const dias = diasDoJogo(b)
+  expect(dias).toHaveLength(2)
+  expect(dias[0]).toMatchObject({ data: '2026-11-13', treinosKcal: 0, qtdTreinos: 0 })
+  expect(dias[0].consumido).toBeCloseTo(384)
+  expect(dias[0].kcalPorTipo.almoco).toBeCloseTo(256)
+  expect(dias[0].kcalPorTipo.jantar).toBeCloseTo(128)
+  expect(Object.keys(dias[0].kcalPorTipo)).toHaveLength(2)
+  expect(dias[1]).toEqual({ data: '2026-11-14', kcalPorTipo: {}, consumido: 0, treinosKcal: 300, qtdTreinos: 1 })
 })
