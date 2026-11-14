@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { carregarBancoSalvo, type Banco } from './db/banco'
 import { getPerfil } from './db/repos'
 import { semearTaco, type AlimentoTaco } from './db/seed'
+import { sincronizarApelidosLista } from './db/apelidos'
 import { ProvedorBanco, useBanco } from './estado'
 import { Hoje } from './telas/Hoje'
 import { Perfil } from './telas/Perfil'
@@ -25,6 +26,11 @@ async function iniciarBanco(): Promise<Banco> {
     if (semearTaco(b, itens) > 0) await b.salvar()
   } catch (e) {
     console.error('Falha ao carregar a TACO', e)
+  }
+  try {
+    sincronizarApelidosLista(b)
+  } catch (e) {
+    console.error('Falha ao sincronizar os apelidos', e)
   }
   return b
 }
