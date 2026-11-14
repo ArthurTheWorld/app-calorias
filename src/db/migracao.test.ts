@@ -62,3 +62,12 @@ test('banco novo aceita madrugada e recusa tipo inválido', async () => {
     `INSERT INTO refeicoes (data, tipo, alimento_id, gramas, kcal) VALUES ('2026-11-13', 'ceia', ?, 1, 1)`, [id],
   )).toThrow()
 })
+
+test('migração não reaproveita ids de refeições apagadas', async () => {
+  const SQL = await carregarSql()
+  const db = new SQL.Database(await bancoV1())
+  db.run('DELETE FROM refeicoes WHERE id IN (3, 4)')
+  const b = await abrirBanco(db.export())
+  await addRefeicao(b, { data: '2026-11-13', tipo: 'madrugada', alimentoId: 1, gramas: 50 })
+  expect(Math.max(...refeicoesDoDia(b, '2026-11-13').map((r) => r.id))).toBe(5)
+})

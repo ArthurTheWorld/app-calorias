@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Calendario } from '../componentes/Calendario'
-import { hojeApp } from '../calc/datas'
+import { useHojeApp } from '../useHojeApp'
 import type { Perfil } from '../calc/energia'
 import { resumirDias, resumoMes, streak } from '../calc/historico'
 import { conquistas } from '../calc/conquistas'
@@ -19,7 +19,7 @@ const fmt = (n: number) => Math.round(n).toLocaleString('pt-BR')
 
 export function Historico({ perfil }: { perfil: Perfil }) {
   const { banco, versao } = useBanco()
-  const hoje = hojeApp()
+  const hoje = useHojeApp()
   const [mes, setMes] = useState(hoje.slice(0, 7))
 
   // Usa o perfil atual para todos os dias (peso antigo não é guardado na v1).

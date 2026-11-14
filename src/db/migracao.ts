@@ -20,6 +20,8 @@ export function migrar(db: Database): void {
   db.run('BEGIN')
   try {
     if (precisaRecriar) {
+      // Guarda o contador do AUTOINCREMENT: o DROP o apagaria e ids de refeições apagadas voltariam a ser usados.
+      const seq = (db.exec(`SELECT seq FROM sqlite_sequence WHERE name = 'refeicoes'`)[0]?.values[0][0] as number | undefined) ?? 0
       db.run(`CREATE TABLE refeicoes_nova (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         data TEXT NOT NULL,
@@ -33,6 +35,9 @@ export function migrar(db: Database): void {
       db.run('DROP TABLE refeicoes')
       db.run('ALTER TABLE refeicoes_nova RENAME TO refeicoes')
       db.run('CREATE INDEX IF NOT EXISTS idx_refeicoes_data ON refeicoes(data)')
+      db.run(`UPDATE sqlite_sequence SET seq = MAX(seq, ?) WHERE name = 'refeicoes'`, [seq])
+      db.run(`INSERT INTO sqlite_sequence (name, seq) SELECT 'refeicoes', ? WHERE ? > 0
+              AND NOT EXISTS (SELECT 1 FROM sqlite_sequence WHERE name = 'refeicoes')`, [seq, seq])
     }
     db.run(`PRAGMA user_version = ${VERSAO_BANCO}`)
     db.run('COMMIT')

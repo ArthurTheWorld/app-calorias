@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { hojeApp } from '../calc/datas'
+import { useHojeApp } from '../useHojeApp'
 import { kcalTreino, type Perfil } from '../calc/energia'
 import { METS } from '../calc/mets'
 import { addTreino, removerTreino, treinosDoDia } from '../db/repos'
@@ -7,7 +7,7 @@ import { useBanco } from '../estado'
 
 export function Treino({ perfil }: { perfil: Perfil }) {
   const { banco, versao, mudou } = useBanco()
-  const data = hojeApp()
+  const data = useHojeApp()
   const treinos = useMemo(() => treinosDoDia(banco, data), [banco, data, versao])
 
   const [tipo, setTipo] = useState('Musculação')

@@ -10,6 +10,7 @@ import { fechamentoOntem, painel } from '../calc/painel'
 import { diasDoJogo, refeicoesDoDia, removerRefeicao, totaisPorDia, treinosDoDia } from '../db/repos'
 import { useBanco } from '../estado'
 import { NOMES_REFEICAO, TIPOS_REFEICAO, type TipoRefeicao } from '../refeicoes'
+import { useHojeApp } from '../useHojeApp'
 import { Adicionar } from './Adicionar'
 
 export function rotuloData(data: string): string {
@@ -27,8 +28,14 @@ const saldo = (deficit: number | null) =>
 
 export function Hoje({ perfil }: { perfil: Perfil }) {
   const { banco, versao, mudou } = useBanco()
-  const hoje = hojeApp()
+  const hoje = useHojeApp()
   const [data, setData] = useState(hoje)
+  // Se o dia virou com o app aberto e a tela estava no "hoje" antigo, acompanha o novo dia.
+  const [hojeVisto, setHojeVisto] = useState(hoje)
+  if (hoje !== hojeVisto) {
+    setHojeVisto(hoje)
+    if (data === hojeVisto) setData(hoje)
+  }
   const [adicionando, setAdicionando] = useState<{ tipo: TipoRefeicao; data: string } | null>(null)
   const [aviso, setAviso] = useState<string | null>(null)
 

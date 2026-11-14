@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import App from '../App'
@@ -117,4 +117,21 @@ test('dia anterior mostra energia e refeições, sem painel', async () => {
   expect(screen.getByTestId('consumido')).toHaveTextContent('128')
   expect(screen.queryByTestId('sequencia')).toBeNull()
   expect(screen.queryByTestId('fechamento')).toBeNull()
+})
+
+test('app aberto de um dia pro outro: depois das 5h a tela vai pro novo dia', async () => {
+  vi.setSystemTime(new Date(2026, 10, 13, 23, 0)) // sexta, 23h
+  await salvarPerfil(b, perfil)
+  const u = userEvent.setup()
+  render(<App banco={b} />)
+  expect(await screen.findByText('DIA 1')).toBeInTheDocument()
+  vi.setSystemTime(new Date(2026, 10, 14, 8, 0)) // sábado, 8h
+  await act(async () => { document.dispatchEvent(new Event('visibilitychange')) })
+  expect(screen.getByTestId('sequencia')).toBeInTheDocument()
+  await u.click(screen.getByRole('button', { name: 'Adicionar em Café da manhã' }))
+  await u.type(screen.getByPlaceholderText('Buscar alimento'), 'arroz')
+  await u.click(await screen.findByText('Arroz'))
+  await u.click(screen.getByRole('button', { name: 'Adicionar' }))
+  expect(refeicoesDoDia(b, HOJE)).toHaveLength(1)
+  expect(refeicoesDoDia(b, ONTEM)).toHaveLength(0)
 })
