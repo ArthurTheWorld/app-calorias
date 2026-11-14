@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { parseGramas } from '../calc/datas'
 import { addRefeicao, adicionarApelido, buscarAlimentos, criarAlimento, type Alimento, type TipoRefeicao } from '../db/repos'
 import { useBanco } from '../estado'
@@ -14,8 +14,9 @@ export function Adicionar({ data, tipo, fechar }: Props) {
   const [escolhido, setEscolhido] = useState<Alimento | null>(null)
   const [gramasTxt, setGramasTxt] = useState('100')
   const [cadastrando, setCadastrando] = useState(false)
-  /** Termo que o usuário está ensinando: o próximo alimento escolhido recebe esse apelido. */
+  /** Termo que o usuário está ensinando: vira apelido do alimento quando a refeição é confirmada. */
   const [ensinando, setEnsinando] = useState<string | null>(null)
+  const campoBusca = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
     const t = setTimeout(() => setTermoBusca(termo), 150)
@@ -25,22 +26,17 @@ export function Adicionar({ data, tipo, fechar }: Props) {
   const resultados = useMemo(() => buscarAlimentos(banco, termoBusca), [banco, termoBusca])
   const gramas = parseGramas(gramasTxt)
 
-  async function escolher(a: Alimento) {
-    if (ensinando) {
-      await adicionarApelido(banco, a.id, ensinando)
-      setEnsinando(null)
-    }
-    setEscolhido(a)
-  }
-
   function ensinar() {
     setEnsinando(termoBusca.trim())
     setTermo('')
     setTermoBusca('')
+    campoBusca.current?.focus()
   }
 
   async function confirmar() {
     if (!escolhido || gramas === null) return
+    // O apelido só é gravado ao confirmar: uma escolha errada desfeita com "Trocar" não vira apelido.
+    if (ensinando) await adicionarApelido(banco, escolhido.id, ensinando)
     await addRefeicao(banco, { data, tipo, alimentoId: escolhido.id, gramas })
     mudou()
     fechar(true)
@@ -53,7 +49,7 @@ export function Adicionar({ data, tipo, fechar }: Props) {
         voltar={() => setCadastrando(false)}
         criado={async (a) => {
           const id = await criarAlimento(banco, a)
-          await escolher({ ...a, id })
+          setEscolhido({ ...a, id })
           setCadastrando(false)
         }}
       />
@@ -90,13 +86,13 @@ export function Adicionar({ data, tipo, fechar }: Props) {
             </p>
           )}
           <input
-            className="busca" placeholder="Buscar alimento" value={termo} autoFocus
+            ref={campoBusca} className="busca" placeholder="Buscar alimento" value={termo} autoFocus
             onChange={(e) => setTermo(e.target.value)}
           />
           <ul className="resultados">
             {resultados.map((a) => (
               <li key={a.id}>
-                <button onClick={() => escolher(a)}>
+                <button onClick={() => setEscolhido(a)}>
                   <span>{a.nome}</span>
                   <small>{a.kcal100g} kcal/100 g</small>
                 </button>

@@ -112,3 +112,22 @@ describe('busca por apelido', () => {
     expect(buscarAlimentos(b, 'arroz').filter((a) => a.nome === 'Arroz, tipo 1, cozido')).toHaveLength(1)
   })
 })
+
+describe('ordem por qualidade do apelido', () => {
+  const taco = { kcal100g: 100, proteinaG: 0, carboG: 0, gorduraG: 0, origem: 'TACO' as const }
+  beforeEach(async () => {
+    for (const nome of ['Feijão, preto, cozido', 'Feijão, carioca, cozido', 'Batata, doce, cozida', 'Batata, inglesa, cozida', 'Mel, de abelha', 'Melancia, crua'])
+      await criarAlimento(b, { ...taco, nome })
+    sincronizarApelidosLista(b, {
+      'Feijão, carioca, cozido': ['feijão', 'feijão carioca'], 'Feijão, preto, cozido': ['feijão preto'],
+      'Batata, inglesa, cozida': ['batata'], 'Batata, doce, cozida': ['batata doce'],
+      'Mel, de abelha': ['mel'], 'Melancia, crua': ['melancia'],
+    })
+  })
+  test('apelido exato vem antes de apelido que só contém o termo', () => {
+    expect(buscarAlimentos(b, 'feijão')[0]?.nome).toBe('Feijão, carioca, cozido')
+    expect(buscarAlimentos(b, 'batata')[0]?.nome).toBe('Batata, inglesa, cozida')
+    expect(buscarAlimentos(b, 'mel')[0]?.nome).toBe('Mel, de abelha')
+    expect(buscarAlimentos(b, 'feijão preto')[0]?.nome).toBe('Feijão, preto, cozido')
+  })
+})

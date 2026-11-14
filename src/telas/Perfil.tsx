@@ -68,7 +68,7 @@ function SeusApelidos() {
   const apelidos = useMemo(() => apelidosDoUsuario(banco), [banco, versao])
   if (apelidos.length === 0) return null
   return (
-    <div className="cartao">
+    <div className="cartao apelidos">
       <h2>Seus apelidos</h2>
       {apelidos.map((a) => (
         <div key={a.id} className="item">

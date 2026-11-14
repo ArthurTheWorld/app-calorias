@@ -114,5 +114,4 @@ label { display: block; font-size: .85rem; color: var(--suave); margin-bottom: 1
 /* Apelidos */
 .aviso .link { background: transparent; color: var(--acento); font-weight: 600; padding: 0 0 0 8px; text-decoration: underline; }
 .vazio p { margin-bottom: 4px; }
-.item { padding-left: 0; }
-.refeicao .item { padding-left: 28px; }
+.apelidos .item { padding-left: 0; }

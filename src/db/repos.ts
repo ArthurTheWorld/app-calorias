@@ -67,20 +67,24 @@ export function buscarAlimentos(b: Banco, termo: string, limite = 20): Alimento[
   const noNome = palavras.map(() => 'a.nome_busca LIKE ?').join(' AND ')
   const noApelido = palavras.map(() => 'ap.termo_busca LIKE ?').join(' AND ')
   const padroes = palavras.map((p) => `%${p}%`)
-  // via: 0 = achado por apelido do usuário, 1 = por apelido da lista, NULL = só pelo nome.
-  // Ordem: apelidos do usuário, apelidos da lista, alimentos próprios, nomes mais curtos.
+  const exato = termoBusca(termo)
+  // via (menor = melhor): 0 apelido do usuário igual ao termo, 1 do usuário que contém o termo,
+  // 2 da lista igual ao termo, 3 da lista que contém; NULL = achado só pelo nome.
+  // Ordem: via, apelido mais curto, alimentos próprios, nomes mais curtos.
   return consultar<Alimento>(
     b,
     `SELECT id, nome, kcal100g, proteinaG, carboG, gorduraG, origem FROM (
        SELECT a.id, a.nome, a.kcal_100g AS kcal100g, a.proteina_g AS proteinaG, a.carbo_g AS carboG,
               a.gordura_g AS gorduraG, a.origem,
               (${noNome}) AS pelo_nome,
-              (SELECT MIN(CASE ap.origem WHEN 'usuario' THEN 0 ELSE 1 END)
-                 FROM apelidos ap WHERE ap.alimento_id = a.id AND ${noApelido}) AS via
+              (SELECT MIN((CASE ap.origem WHEN 'usuario' THEN 0 ELSE 2 END) + (ap.termo_busca <> ?))
+                 FROM apelidos ap WHERE ap.alimento_id = a.id AND ${noApelido}) AS via,
+              (SELECT MIN(length(ap.termo_busca))
+                 FROM apelidos ap WHERE ap.alimento_id = a.id AND ${noApelido}) AS tam_apelido
        FROM alimentos a)
      WHERE pelo_nome OR via IS NOT NULL
-     ORDER BY via IS NULL, via, origem = 'TACO', length(nome) LIMIT ?`,
-    [...padroes, ...padroes, limite],
+     ORDER BY via IS NULL, via, tam_apelido, origem = 'TACO', length(nome) LIMIT ?`,
+    [...padroes, exato, ...padroes, ...padroes, limite],
   )
 }
 
