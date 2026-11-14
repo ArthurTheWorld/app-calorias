@@ -121,3 +121,14 @@ label { display: block; font-size: .85rem; color: var(--suave); margin-bottom: 1
 .peso .item span:first-child { color: var(--suave); }
 .peso-registrar { display: flex; gap: 8px; align-items: flex-end; margin: 8px 0 4px; }
 .peso-registrar label { flex: 1; margin: 0; }
+
+/* Porções */
+.porcoes { display: flex; gap: 8px; overflow-x: auto; margin: 10px 0; padding-bottom: 4px; scrollbar-width: none; }
+.porcoes button { flex: none; background: transparent; color: var(--texto); border: 1px solid var(--borda); padding: 8px 12px; font-weight: 500; }
+.porcoes button[aria-checked="true"] { background: var(--acento); color: #000; border-color: var(--acento); font-weight: 700; }
+.porcoes button.nova { color: var(--acento); border-style: dashed; border-color: var(--acento); }
+.quantidade { display: flex; align-items: flex-end; gap: 10px; }
+.quantidade label { flex: 1; }
+.quantidade input { text-align: center; font-size: 1.2rem; }
+.quantidade button { min-width: 48px; min-height: 48px; font-size: 1.5rem; padding: 0; }
+.nova-porcao { border: 1px dashed var(--acento); border-radius: 10px; padding: 10px; margin: 8px 0; display: grid; gap: 8px; }
