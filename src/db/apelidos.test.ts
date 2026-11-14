@@ -1,10 +1,10 @@
-import { readFileSync } from 'node:fs'
+import tacoJson from '../../public/taco.json'
 import { beforeEach, expect, test } from 'vitest'
 import { abrirBanco, consultar, type Banco } from './banco'
 import { APELIDOS_LISTA, sincronizarApelidosLista } from './apelidos'
 import { adicionarApelido, apelidosDoUsuario, criarAlimento } from './repos'
 
-const taco = new Set((JSON.parse(readFileSync('public/taco.json', 'utf8')) as { nome: string }[]).map((a) => a.nome))
+const taco = new Set((tacoJson as { nome: string }[]).map((a) => a.nome))
 const base = { kcal100g: 100, proteinaG: 0, carboG: 0, gorduraG: 0, origem: 'TACO' as const }
 const contarLista = (b: Banco) =>
   consultar<{ n: number }>(b, "SELECT COUNT(*) AS n FROM apelidos WHERE origem = 'lista'")[0].n
