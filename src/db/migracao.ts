@@ -2,12 +2,13 @@ import type { Database } from 'sql.js'
 import { hojeApp } from '../calc/datas'
 import { TIPOS_REFEICAO } from '../refeicoes'
 
-export const VERSAO_BANCO = 4
+export const VERSAO_BANCO = 5
 
 const CHECK_TIPOS = TIPOS_REFEICAO.map((t) => `'${t}'`).join(',')
 
 /**
  * Leva o banco para a versão atual.
+ * v4 → v5: a tabela `porcoes` vem do SCHEMA; `refeicoes` ganha `qtd` e `porcao` (opcionais).
  * v3 → v4: a tabela `pesos` vem do SCHEMA; se estiver vazia e houver perfil, o peso do perfil vira o
  * primeiro registro, na data do primeiro dia registrado (assim os dias antigos mantêm o cálculo).
  * v2 → v3: a tabela `apelidos` vem do SCHEMA (CREATE IF NOT EXISTS).
@@ -52,6 +53,12 @@ export function migrar(db: Database): void {
          WHERE id = 1 AND NOT EXISTS (SELECT 1 FROM pesos)`,
         [primeiro],
       )
+    }
+    if (versao < 5) {
+      // Depois da reconstrução v1→v2, que recria refeicoes sem estas colunas.
+      const cols = new Set((db.exec('PRAGMA table_info(refeicoes)')[0]?.values ?? []).map((v) => String(v[1])))
+      if (!cols.has('qtd')) db.run('ALTER TABLE refeicoes ADD COLUMN qtd REAL')
+      if (!cols.has('porcao')) db.run('ALTER TABLE refeicoes ADD COLUMN porcao TEXT')
     }
     db.run(`PRAGMA user_version = ${VERSAO_BANCO}`)
     db.run('COMMIT')

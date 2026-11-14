@@ -46,16 +46,16 @@ test('banco v1 migra sem perder registros e aceita madrugada', async () => {
   ])
   await addRefeicao(b, { data: '2026-11-13', tipo: 'madrugada', alimentoId: 1, gramas: 50 })
   expect(refeicoesDoDia(b, '2026-11-13')).toHaveLength(5)
-  expect(versao(b)).toBe(4)
+  expect(versao(b)).toBe(5)
 
   const b2 = await abrirBanco(b.exportar())
   expect(refeicoesDoDia(b2, '2026-11-13')).toHaveLength(5)
-  expect(versao(b2)).toBe(4)
+  expect(versao(b2)).toBe(5)
 })
 
 test('banco novo aceita madrugada e recusa tipo inválido', async () => {
   const b = await abrirBanco()
-  expect(versao(b)).toBe(4)
+  expect(versao(b)).toBe(5)
   const id = await criarAlimento(b, { nome: 'X', kcal100g: 100, proteinaG: 0, carboG: 0, gorduraG: 0, origem: 'custom' })
   await addRefeicao(b, { data: '2026-11-13', tipo: 'madrugada', alimentoId: id, gramas: 50 })
   expect(() => b.db.run(
@@ -77,7 +77,33 @@ test('banco v2 (sem apelidos) vira v3 e aceita apelidos', async () => {
   const db = new SQL.Database(await bancoV1())
   db.run('PRAGMA user_version = 2')
   const b = await abrirBanco(db.export())
-  expect(versao(b)).toBe(4)
+  expect(versao(b)).toBe(5)
   await adicionarApelido(b, 1, 'marmita')
   expect(apelidosDoUsuario(b)).toHaveLength(1)
+})
+
+const colunas = (b: Awaited<ReturnType<typeof abrirBanco>>) =>
+  consultar<{ name: string }>(b, 'PRAGMA table_info(refeicoes)').map((c) => c.name)
+
+test('v4 → v5 adiciona qtd e porcao preservando refeições', async () => {
+  const b = await abrirBanco()
+  const id = await criarAlimento(b, { nome: 'X', kcal100g: 100, proteinaG: 0, carboG: 0, gorduraG: 0, origem: 'custom' })
+  await addRefeicao(b, { data: '2026-11-13', tipo: 'cafe', alimentoId: id, gramas: 50 })
+  // Volta o banco ao formato v4: refeicoes sem as colunas novas, sem porcoes.
+  b.db.run('DROP TABLE porcoes')
+  b.db.run(`CREATE TABLE r4 (id INTEGER PRIMARY KEY AUTOINCREMENT, data TEXT NOT NULL, tipo TEXT NOT NULL,
+    alimento_id INTEGER NOT NULL, gramas REAL NOT NULL, kcal REAL NOT NULL)`)
+  b.db.run('INSERT INTO r4 SELECT id, data, tipo, alimento_id, gramas, kcal FROM refeicoes')
+  b.db.run('DROP TABLE refeicoes')
+  b.db.run('ALTER TABLE r4 RENAME TO refeicoes')
+  b.db.run('PRAGMA user_version = 4')
+  const m = await abrirBanco(b.exportar())
+  expect(colunas(m)).toEqual(expect.arrayContaining(['qtd', 'porcao']))
+  expect(refeicoesDoDia(m, '2026-11-13').map((r) => [r.gramas, r.qtd, r.porcao])).toEqual([[50, null, null]])
+  expect(versao(m)).toBe(5)
+})
+
+test('v1 → v5 também ganha qtd e porcao', async () => {
+  const b = await abrirBanco(await bancoV1())
+  expect(colunas(b)).toEqual(expect.arrayContaining(['qtd', 'porcao']))
 })

@@ -10,7 +10,7 @@ test('csv com cabeçalho, ; e aspas escapadas', async () => {
   const csv = tabelaParaCsv(b, 'alimentos').split('\n')
   expect(csv[0]).toBe('id;nome;nome_busca;kcal_100g;proteina_g;carbo_g;gordura_g;origem')
   expect(csv[1]).toBe('1;"Pão; ""francês""";"pao; ""frances""";300;8;58.6;3.1;custom')
-  expect(tabelaParaCsv(b, 'refeicoes').split('\n')[1]).toBe('1;2026-11-14;cafe;1;50;150')
+  expect(tabelaParaCsv(b, 'refeicoes').split('\n')[1]).toBe('1;2026-11-14;cafe;1;50;150;;')
 })
 
 test('tabela desconhecida é recusada', async () => {
@@ -30,4 +30,9 @@ test('backup sem a tabela de apelidos continua válido; apelidos entram no csv',
   expect(await validarBancoImportado(b.exportar())).toBe(true)
   const b2 = await abrirBanco()
   expect(tabelaParaCsv(b2, 'apelidos').split('\n')[0]).toBe('id;alimento_id;termo;termo_busca;origem')
+})
+
+test('porções entram na exportação', async () => {
+  const b = await abrirBanco()
+  expect(tabelaParaCsv(b, 'porcoes').split('\n')[0]).toBe('id;alimento_id;nome;gramas;origem')
 })

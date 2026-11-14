@@ -22,6 +22,9 @@ export interface RefeicaoView {
   nome: string
   gramas: number
   kcal: number
+  /** Quantidade e nome da porção quando registrada por porção; null quando em gramas. */
+  qtd: number | null
+  porcao: string | null
 }
 
 export interface Treino {
@@ -106,12 +109,12 @@ export async function criarAlimento(b: Banco, a: Omit<Alimento, 'id'>): Promise<
 // ---- refeições
 export async function addRefeicao(
   b: Banco,
-  r: { data: string; tipo: TipoRefeicao; alimentoId: number; gramas: number },
+  r: { data: string; tipo: TipoRefeicao; alimentoId: number; gramas: number; qtd?: number; porcao?: string },
 ): Promise<void> {
   b.db.run(
-    `INSERT INTO refeicoes (data, tipo, alimento_id, gramas, kcal)
-     SELECT ?, ?, id, ?, kcal_100g * ? / 100.0 FROM alimentos WHERE id = ?`,
-    [r.data, r.tipo, r.gramas, r.gramas, r.alimentoId],
+    `INSERT INTO refeicoes (data, tipo, alimento_id, gramas, kcal, qtd, porcao)
+     SELECT ?, ?, id, ?, kcal_100g * ? / 100.0, ?, ? FROM alimentos WHERE id = ?`,
+    [r.data, r.tipo, r.gramas, r.gramas, r.qtd ?? null, r.porcao ?? null, r.alimentoId],
   )
   await b.salvar()
 }
@@ -119,7 +122,7 @@ export async function addRefeicao(
 export function refeicoesDoDia(b: Banco, data: string): RefeicaoView[] {
   return consultar<RefeicaoView>(
     b,
-    `SELECT r.id, r.data, r.tipo, r.alimento_id AS alimentoId, a.nome, r.gramas, r.kcal
+    `SELECT r.id, r.data, r.tipo, r.alimento_id AS alimentoId, a.nome, r.gramas, r.kcal, r.qtd, r.porcao
      FROM refeicoes r JOIN alimentos a ON a.id = r.alimento_id WHERE r.data = ? ORDER BY r.id`,
     [data],
   )
@@ -232,6 +235,52 @@ export function apelidosDoUsuario(b: Banco): Apelido[] {
 export async function removerApelido(b: Banco, id: number): Promise<void> {
   b.db.run(`DELETE FROM apelidos WHERE id = ? AND origem = 'usuario'`, [id])
   await b.salvar()
+}
+
+// ---- porções
+export interface Porcao { id: number; alimentoId: number; nome: string; gramas: number; origem: 'lista' | 'usuario' }
+
+const SELECT_PORCAO = 'SELECT p.id, p.alimento_id AS alimentoId, p.nome, p.gramas, p.origem FROM porcoes p'
+
+/** Porções de um alimento: as da lista primeiro, depois as do usuário. */
+export function porcoesDoAlimento(b: Banco, alimentoId: number): Porcao[] {
+  return consultar<Porcao>(b, `${SELECT_PORCAO} WHERE p.alimento_id = ? ORDER BY p.origem = 'usuario', p.id`, [alimentoId])
+}
+
+/** Porção criada pelo usuário; devolve o id. Mesmo nome no mesmo alimento atualiza os gramas. */
+export async function adicionarPorcao(b: Banco, alimentoId: number, nome: string, gramas: number): Promise<number> {
+  const n = nome.trim().replace(/\s+/g, ' ')
+  b.db.run(
+    `INSERT INTO porcoes (alimento_id, nome, gramas, origem) VALUES (?, ?, ?, 'usuario')
+     ON CONFLICT(alimento_id, nome, origem) DO UPDATE SET gramas = excluded.gramas`,
+    [alimentoId, n, gramas],
+  )
+  const [{ id }] = consultar<{ id: number }>(
+    b, `SELECT id FROM porcoes WHERE alimento_id = ? AND nome = ? AND origem = 'usuario'`, [alimentoId, n],
+  )
+  await b.salvar()
+  return id
+}
+
+export function porcoesDoUsuario(b: Banco): (Porcao & { nomeAlimento: string })[] {
+  return consultar<Porcao & { nomeAlimento: string }>(
+    b,
+    `SELECT p.id, p.alimento_id AS alimentoId, p.nome, p.gramas, p.origem, a.nome AS nomeAlimento
+     FROM porcoes p JOIN alimentos a ON a.id = p.alimento_id
+     WHERE p.origem = 'usuario' ORDER BY a.nome, p.nome`,
+  )
+}
+
+export async function removerPorcao(b: Banco, id: number): Promise<void> {
+  b.db.run(`DELETE FROM porcoes WHERE id = ? AND origem = 'usuario'`, [id])
+  await b.salvar()
+}
+
+/** Como o alimento foi registrado da última vez (maior id), ou null se nunca foi. */
+export function ultimoUso(b: Banco, alimentoId: number): { porcao: string | null; qtd: number | null; gramas: number } | null {
+  return consultar<{ porcao: string | null; qtd: number | null; gramas: number }>(
+    b, 'SELECT porcao, qtd, gramas FROM refeicoes WHERE alimento_id = ? ORDER BY id DESC LIMIT 1', [alimentoId],
+  )[0] ?? null
 }
 
 // ---- pesos

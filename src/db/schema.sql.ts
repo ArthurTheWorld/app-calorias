@@ -23,7 +23,9 @@ CREATE TABLE IF NOT EXISTS refeicoes (
   tipo TEXT NOT NULL CHECK (tipo IN ('cafe','almoco','lanche','jantar','madrugada')),
   alimento_id INTEGER NOT NULL REFERENCES alimentos(id),
   gramas REAL NOT NULL CHECK (gramas > 0),
-  kcal REAL NOT NULL
+  kcal REAL NOT NULL,
+  qtd REAL,
+  porcao TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_refeicoes_data ON refeicoes(data);
 CREATE TABLE IF NOT EXISTS treinos (
@@ -48,4 +50,13 @@ CREATE TABLE IF NOT EXISTS pesos (
   data TEXT NOT NULL UNIQUE,
   peso_kg REAL NOT NULL CHECK (peso_kg BETWEEN 30 AND 300)
 );
+CREATE TABLE IF NOT EXISTS porcoes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  alimento_id INTEGER NOT NULL REFERENCES alimentos(id),
+  nome TEXT NOT NULL,
+  gramas REAL NOT NULL CHECK (gramas > 0),
+  origem TEXT NOT NULL CHECK (origem IN ('lista','usuario')),
+  UNIQUE (alimento_id, nome, origem)
+);
+CREATE INDEX IF NOT EXISTS idx_porcoes_alimento ON porcoes(alimento_id);
 `
