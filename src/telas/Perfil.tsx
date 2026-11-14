@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { DEFICIT_PADRAO, gastoDia, metaConsumo, tmb, type Perfil as TPerfil, type Sexo } from '../calc/energia'
-import { apelidosDoUsuario, diasDoJogo, removerApelido, salvarPerfil } from '../db/repos'
+import { apelidosDoUsuario, diasDoJogo, pesosRegistrados, registrarPeso, removerApelido, removerPeso, salvarPerfil } from '../db/repos'
+import { useHojeApp } from '../useHojeApp'
 import { nivel, xpTotal } from '../calc/jogo'
 import { useBanco } from '../estado'
 import { hojeApp } from '../calc/datas'
@@ -17,7 +18,9 @@ export function Perfil({ perfil, aoSalvar }: { perfil: TPerfil | null; aoSalvar:
   const [salvo, setSalvo] = useState(false)
 
   const n = (s: string) => Number(s.replace(',', '.'))
-  const candidato: TPerfil = { alturaCm: n(altura), pesoKg: n(peso), idade: n(idade), sexo, deficitMeta: n(deficit) }
+  // Com perfil, o peso vem do registro mais recente (muda pelo cartão "Peso"), não do formulário.
+  const pesoKg = perfil ? perfil.pesoKg : n(peso)
+  const candidato: TPerfil = { alturaCm: n(altura), pesoKg, idade: n(idade), sexo, deficitMeta: n(deficit) }
   const valido =
     candidato.alturaCm >= 100 && candidato.alturaCm <= 250 &&
     candidato.pesoKg >= 30 && candidato.pesoKg <= 300 &&
@@ -26,6 +29,7 @@ export function Perfil({ perfil, aoSalvar }: { perfil: TPerfil | null; aoSalvar:
 
   async function salvar() {
     await salvarPerfil(banco, candidato)
+    if (!perfil) await registrarPeso(banco, hojeApp(), candidato.pesoKg)
     setSalvo(true)
     mudou()
     aoSalvar()
@@ -37,7 +41,9 @@ export function Perfil({ perfil, aoSalvar }: { perfil: TPerfil | null; aoSalvar:
       {!perfil && <p>Preencha seus dados para o app calcular seu gasto e sua meta.</p>}
       <div className="cartao formulario">
         <label>Altura (cm)<input inputMode="decimal" value={altura} onChange={(e) => { setAltura(e.target.value); setSalvo(false) }} /></label>
-        <label>Peso (kg)<input inputMode="decimal" value={peso} onChange={(e) => { setPeso(e.target.value); setSalvo(false) }} /></label>
+        {!perfil && (
+          <label>Peso (kg)<input inputMode="decimal" value={peso} onChange={(e) => { setPeso(e.target.value); setSalvo(false) }} /></label>
+        )}
         <label>Idade<input inputMode="numeric" value={idade} onChange={(e) => { setIdade(e.target.value); setSalvo(false) }} /></label>
         <label>Sexo
           <select value={sexo} onChange={(e) => { setSexo(e.target.value as Sexo); setSalvo(false) }}>
@@ -56,10 +62,50 @@ export function Perfil({ perfil, aoSalvar }: { perfil: TPerfil | null; aoSalvar:
         )}
         <button disabled={!valido} onClick={salvar}>{salvo ? 'Salvo ✓' : 'Salvar'}</button>
       </div>
+      {perfil && <Peso />}
       {perfil && <Nivel />}
       <SeusApelidos />
       <Dados />
     </section>
+  )
+}
+
+const dataBr = (data: string) => data.split('-').reverse().join('/')
+const kg = (n: number) => `${n.toLocaleString('pt-BR')} kg`
+
+function Peso() {
+  const { banco, versao, mudou } = useBanco()
+  const hoje = useHojeApp()
+  const pesos = useMemo(() => pesosRegistrados(banco), [banco, versao])
+  const [txt, setTxt] = useState('')
+  const valor = Number(txt.replace(',', '.'))
+  const valido = txt.trim() !== '' && valor >= 30 && valor <= 300
+
+  async function registrar() {
+    await registrarPeso(banco, hoje, valor)
+    setTxt('')
+    mudou()
+  }
+
+  return (
+    <div className="cartao peso">
+      <h2>Peso</h2>
+      <div className="peso-registrar">
+        <label>Peso de hoje (kg)
+          <input inputMode="decimal" value={txt} onChange={(e) => setTxt(e.target.value)} />
+        </label>
+        <button disabled={!valido} onClick={registrar}>Registrar</button>
+      </div>
+      {[...pesos].reverse().slice(0, 10).map((p) => (
+        <div key={p.id} className="item">
+          <span>{dataBr(p.data)}</span>
+          <span>{kg(p.pesoKg)}</span>
+          {pesos.length > 1 && (
+            <button aria-label={`Apagar peso de ${dataBr(p.data)}`} onClick={async () => { await removerPeso(banco, p.id); mudou() }}>×</button>
+          )}
+        </div>
+      ))}
+    </div>
   )
 }
 

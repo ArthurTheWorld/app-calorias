@@ -115,3 +115,9 @@ label { display: block; font-size: .85rem; color: var(--suave); margin-bottom: 1
 .aviso .link { background: transparent; color: var(--acento); font-weight: 600; padding: 0 0 0 8px; text-decoration: underline; }
 .vazio p { margin-bottom: 4px; }
 .apelidos .item { padding-left: 0; }
+
+/* Peso */
+.peso .item, .apelidos .item { padding-left: 0; }
+.peso .item span:first-child { color: var(--suave); }
+.peso-registrar { display: flex; gap: 8px; align-items: flex-end; margin: 8px 0 4px; }
+.peso-registrar label { flex: 1; margin: 0; }

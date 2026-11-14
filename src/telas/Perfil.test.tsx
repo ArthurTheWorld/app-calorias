@@ -1,9 +1,9 @@
-import { act, render, screen } from '@testing-library/react'
+import { act, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { expect, test } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import App from '../App'
 import { abrirBanco } from '../db/banco'
-import { addRefeicao, adicionarApelido, criarAlimento, salvarPerfil } from '../db/repos'
+import { addRefeicao, adicionarApelido, criarAlimento, getPerfil, pesosRegistrados, registrarPeso, salvarPerfil } from '../db/repos'
 
 test('perfil mostra nível e barra de xp', async () => {
   const b = await abrirBanco()
@@ -32,5 +32,65 @@ test('perfil lista e remove apelidos do usuário', async () => {
   expect(screen.getByText('Seus apelidos')).toBeInTheDocument()
   expect(screen.getByText('marmita → Arroz')).toBeInTheDocument()
   await u.click(screen.getByRole('button', { name: 'Remover apelido marmita' }))
-  expect(screen.queryByText('Seus apelidos')).toBeNull()
+  await waitFor(() => expect(screen.queryByText('Seus apelidos')).toBeNull())
+})
+
+describe('peso', () => {
+  const p = { alturaCm: 175, pesoKg: 80, idade: 25, sexo: 'M' as const, deficitMeta: 300 }
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 10, 14, 12, 0))
+  })
+  afterEach(() => { vi.useRealTimers() })
+
+  test('primeiro cadastro registra o primeiro peso', async () => {
+    const b = await abrirBanco()
+    const u = userEvent.setup()
+    render(<App banco={b} />)
+    await u.type(await screen.findByLabelText('Altura (cm)'), '175')
+    await u.type(screen.getByLabelText('Peso (kg)'), '82')
+    await u.type(screen.getByLabelText('Idade'), '30')
+    await u.click(screen.getByRole('button', { name: 'Salvar' }))
+    expect(pesosRegistrados(b).map((x) => [x.data, x.pesoKg])).toEqual([['2026-11-14', 82]])
+  })
+
+  test('com perfil: sem campo de peso no formulário; cartão registra com vírgula', async () => {
+    const b = await abrirBanco()
+    await salvarPerfil(b, p)
+    await registrarPeso(b, '2026-11-01', 80)
+    const u = userEvent.setup()
+    render(<App banco={b} />)
+    await u.click(await screen.findByRole('button', { name: 'Perfil' }))
+    expect(screen.queryByLabelText('Peso (kg)')).toBeNull()
+    await u.type(screen.getByLabelText('Peso de hoje (kg)'), '79,5')
+    await u.click(screen.getByRole('button', { name: 'Registrar' }))
+    expect(await screen.findByText('79,5 kg')).toBeInTheDocument()
+    expect(getPerfil(b)?.pesoKg).toBe(79.5)
+  })
+
+  test('registrar de madrugada vai pro dia do app', async () => {
+    vi.setSystemTime(new Date(2026, 10, 15, 2, 0))
+    const b = await abrirBanco()
+    await salvarPerfil(b, p)
+    await registrarPeso(b, '2026-11-01', 80)
+    const u = userEvent.setup()
+    render(<App banco={b} />)
+    await u.click(await screen.findByRole('button', { name: 'Perfil' }))
+    await u.type(screen.getByLabelText('Peso de hoje (kg)'), '79')
+    await u.click(screen.getByRole('button', { name: 'Registrar' }))
+    expect(pesosRegistrados(b).map((x) => x.data)).toEqual(['2026-11-01', '2026-11-14'])
+  })
+
+  test('apagar pesagem; o último registro não tem botão de apagar', async () => {
+    const b = await abrirBanco()
+    await salvarPerfil(b, p)
+    await registrarPeso(b, '2026-11-01', 80)
+    await registrarPeso(b, '2026-11-14', 79)
+    const u = userEvent.setup()
+    render(<App banco={b} />)
+    await u.click(await screen.findByRole('button', { name: 'Perfil' }))
+    await u.click(screen.getByRole('button', { name: 'Apagar peso de 14/11/2026' }))
+    expect(pesosRegistrados(b)).toHaveLength(1)
+    await waitFor(() => expect(screen.queryByRole('button', { name: /^Apagar peso/ })).toBeNull())
+  })
 })
