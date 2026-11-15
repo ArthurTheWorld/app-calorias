@@ -2,6 +2,8 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { expect, test, vi } from 'vitest'
 import App from '../App'
+import { ProvedorBanco } from '../estado'
+import { Treino } from './Treino'
 import { abrirBanco } from '../db/banco'
 import { registrarPeso, salvarPerfil, treinosDoDia } from '../db/repos'
 import { gastoDia, kcalTreino } from '../calc/energia'
@@ -55,4 +57,27 @@ test('sugestão do treino usa o peso mais recente', async () => {
   await u.clear(dur)
   await u.type(dur, '60')
   expect(screen.getByLabelText('kcal gastas')).toHaveValue(String(kcalTreino(METS['Musculação']!, 60, 60)))
+})
+
+test('com a ficha vazia a aba Treino não mostra divisões', async () => {
+  const b = await abrirBanco()
+  await salvarPerfil(b, perfil)
+  const u = userEvent.setup()
+  render(<App banco={b} />)
+  await u.click(await screen.findByRole('button', { name: 'Treino' }))
+  expect(screen.getByRole('button', { name: 'Registrar treino' })).toBeInTheDocument()
+  expect(screen.queryByRole('radiogroup', { name: 'Divisão' })).not.toBeInTheDocument()
+})
+
+test('com ficha, a aba Treino mostra a ficha acima do registro de kcal', async () => {
+  const b = await abrirBanco()
+  await salvarPerfil(b, perfil)
+  render(
+    <ProvedorBanco banco={b}>
+      <Treino perfil={perfil} ficha={[{ nome: 'A', exercicios: [{ nome: 'Supino reto', series: 4, reps: '10' }] }]} />
+    </ProvedorBanco>,
+  )
+  expect(screen.getByRole('radiogroup', { name: 'Divisão' })).toBeInTheDocument()
+  expect(screen.getByRole('checkbox', { name: 'Supino reto' })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Registrar treino' })).toBeInTheDocument()
 })

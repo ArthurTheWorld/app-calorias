@@ -4,8 +4,10 @@ import { kcalTreino, type Perfil } from '../calc/energia'
 import { METS } from '../calc/mets'
 import { addTreino, removerTreino, treinosDoDia } from '../db/repos'
 import { useBanco } from '../estado'
+import { FICHA, type Divisao } from '../treino/ficha'
+import { FichaTreino } from './FichaTreino'
 
-export function Treino({ perfil }: { perfil: Perfil }) {
+export function Treino({ perfil, ficha = FICHA }: { perfil: Perfil; ficha?: Divisao[] }) {
   const { banco, versao, mudou } = useBanco()
   const data = useHojeApp()
   const treinos = useMemo(() => treinosDoDia(banco, data), [banco, data, versao])
@@ -30,6 +32,7 @@ export function Treino({ perfil }: { perfil: Perfil }) {
   return (
     <section>
       <h1>Treino de hoje</h1>
+      {ficha.length > 0 && <FichaTreino key={data} ficha={ficha} data={data} />}
       <div className="cartao formulario">
         <label>Tipo
           <select value={tipo} onChange={(e) => { setTipo(e.target.value); setKcalManual(null) }}>

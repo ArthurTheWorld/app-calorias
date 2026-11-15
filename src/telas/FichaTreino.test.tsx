@@ -1,0 +1,92 @@
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { beforeEach, expect, test } from 'vitest'
+import { abrirBanco, type Banco } from '../db/banco'
+import { exerciciosDoDia, marcarExercicio } from '../db/repos'
+import { ProvedorBanco } from '../estado'
+import type { Divisao } from '../treino/ficha'
+import { FichaTreino, divisaoInicial } from './FichaTreino'
+
+const HOJE = '2026-11-14'
+const FICHA: Divisao[] = [
+  { nome: 'A', titulo: 'Peito e tríceps', exercicios: [{ nome: 'Supino reto', series: 4, reps: '10' }, { nome: 'Crucifixo', series: 3, reps: '12' }] },
+  { nome: 'B', titulo: 'Costas', exercicios: [{ nome: 'Remada', series: 4, reps: '10-12' }] },
+  { nome: 'C', exercicios: [{ nome: 'Agachamento', series: 4, reps: '8' }] },
+]
+let b: Banco
+beforeEach(async () => { b = await abrirBanco() })
+
+function abrir(ficha = FICHA) {
+  const u = userEvent.setup()
+  render(<ProvedorBanco banco={b}><FichaTreino ficha={ficha} data={HOJE} /></ProvedorBanco>)
+  return u
+}
+const divisaoMarcada = () => screen.getAllByRole('radio').find((r) => r.getAttribute('aria-checked') === 'true')
+
+test('divisaoInicial: hoje > seguinte à última (circular) > primeira', () => {
+  expect(divisaoInicial(FICHA, [], null)).toBe('A')
+  expect(divisaoInicial(FICHA, [], 'A')).toBe('B')
+  expect(divisaoInicial(FICHA, [], 'C')).toBe('A')
+  expect(divisaoInicial(FICHA, [], 'Z')).toBe('A')
+  expect(divisaoInicial(FICHA, [{ exercicio: 'Remada', divisao: 'B', cargaKg: null }], 'B')).toBe('B')
+})
+
+test('abre na divisão seguinte à última feita e mostra séries', async () => {
+  await marcarExercicio(b, { data: '2026-11-12', divisao: 'A', exercicio: 'Supino reto' })
+  abrir()
+  expect(divisaoMarcada()).toHaveTextContent('B')
+  expect(screen.getByText('Remada')).toBeInTheDocument()
+  expect(screen.getByText('4 × 10-12')).toBeInTheDocument()
+})
+
+test('trocar de divisão mostra os exercícios dela', async () => {
+  const u = abrir()
+  await u.click(screen.getByRole('radio', { name: /B/ }))
+  expect(screen.getByText('Remada')).toBeInTheDocument()
+  expect(screen.queryByText('Supino reto')).not.toBeInTheDocument()
+})
+
+test('marcar grava e desmarcar apaga', async () => {
+  const u = abrir()
+  await u.click(screen.getByRole('checkbox', { name: 'Supino reto' }))
+  await waitFor(() => expect(exerciciosDoDia(b, HOJE)).toEqual([{ exercicio: 'Supino reto', divisao: 'A', cargaKg: null }]))
+  expect(screen.getByRole('checkbox', { name: 'Supino reto' })).toBeChecked()
+  await u.click(screen.getByRole('checkbox', { name: 'Supino reto' }))
+  await waitFor(() => expect(exerciciosDoDia(b, HOJE)).toEqual([]))
+  expect(screen.getByLabelText('Carga de Supino reto (kg)')).toHaveValue('')
+})
+
+test('digitar carga com vírgula grava e marca como feito', async () => {
+  const u = abrir()
+  await u.type(screen.getByLabelText('Carga de Supino reto (kg)'), '32,5')
+  await waitFor(() => expect(exerciciosDoDia(b, HOJE)).toEqual([{ exercicio: 'Supino reto', divisao: 'A', cargaKg: 32.5 }]))
+  expect(screen.getByRole('checkbox', { name: 'Supino reto' })).toBeChecked()
+})
+
+test('carga inválida não grava', async () => {
+  const u = abrir()
+  await u.type(screen.getByLabelText('Carga de Supino reto (kg)'), '600')
+  await u.type(screen.getByLabelText('Carga de Crucifixo (kg)'), 'abc')
+  await new Promise((r) => setTimeout(r, 20))
+  expect(exerciciosDoDia(b, HOJE).find((e) => e.exercicio === 'Supino reto')?.cargaKg ?? null).not.toBe(600)
+  expect(exerciciosDoDia(b, HOJE).find((e) => e.exercicio === 'Crucifixo')).toBeUndefined()
+})
+
+test('apagar a carga mantém marcado, sem carga', async () => {
+  const u = abrir()
+  const campo = screen.getByLabelText('Carga de Supino reto (kg)')
+  await u.type(campo, '30')
+  await u.clear(campo)
+  await waitFor(() => expect(exerciciosDoDia(b, HOJE)).toEqual([{ exercicio: 'Supino reto', divisao: 'A', cargaKg: null }]))
+  expect(screen.getByRole('checkbox', { name: 'Supino reto' })).toBeChecked()
+})
+
+test('mostra a carga da última vez e a de hoje já registrada', async () => {
+  await marcarExercicio(b, { data: '2026-11-07', divisao: 'A', exercicio: 'Supino reto', cargaKg: 30 })
+  await marcarExercicio(b, { data: HOJE, divisao: 'A', exercicio: 'Crucifixo', cargaKg: 12.5 })
+  abrir()
+  expect(screen.getByText('última: 30 kg')).toBeInTheDocument()
+  expect(screen.getByLabelText('Carga de Crucifixo (kg)')).toHaveValue('12,5')
+  expect(screen.getByRole('checkbox', { name: 'Crucifixo' })).toBeChecked()
+  expect(screen.getAllByText(/última:/)).toHaveLength(1)
+})
