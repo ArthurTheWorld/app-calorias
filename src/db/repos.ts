@@ -368,3 +368,9 @@ export function ultimaDivisao(b: Banco): string | null {
   const r = consultar<{ d: string }>(b, 'SELECT divisao AS d FROM exercicios_feitos ORDER BY data DESC, id DESC LIMIT 1')
   return r[0]?.d ?? null
 }
+
+/** Tira a carga do exercício no dia (continua marcado). Não faz nada se não estiver marcado. */
+export async function limparCarga(b: Banco, data: string, exercicio: string): Promise<void> {
+  b.db.run('UPDATE exercicios_feitos SET carga_kg = NULL WHERE data = ? AND exercicio = ?', [data, exercicio])
+  await b.salvar()
+}

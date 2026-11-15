@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { desmarcarExercicio, exerciciosDoDia, marcarExercicio, ultimaCarga, ultimaDivisao, type ExercicioFeito } from '../db/repos'
+import { desmarcarExercicio, exerciciosDoDia, limparCarga, marcarExercicio, ultimaCarga, ultimaDivisao, type ExercicioFeito } from '../db/repos'
 import { useBanco } from '../estado'
 import type { Divisao } from '../treino/ficha'
 
@@ -32,8 +32,11 @@ export function FichaTreino({ ficha, data }: { ficha: Divisao[]; data: string })
   const atual = ficha.find((d) => d.nome === divisao) ?? ficha[0]
   const feito = (nome: string) => feitos.some((e) => e.exercicio === nome)
 
+  /** Lido do banco na hora (não da lista do último render), para toques e teclas rápidos. */
+  const feitoAgora = (nome: string) => exerciciosDoDia(banco, data).some((e) => e.exercicio === nome)
+
   async function alternar(nome: string) {
-    if (feito(nome)) {
+    if (feitoAgora(nome)) {
       setCargas((c) => ({ ...c, [nome]: '' }))
       await desmarcarExercicio(banco, data, nome)
     } else {
@@ -46,13 +49,9 @@ export function FichaTreino({ ficha, data }: { ficha: Divisao[]; data: string })
   async function digitar(nome: string, txt: string) {
     setCargas((c) => ({ ...c, [nome]: txt }))
     const c = lerCarga(txt)
-    if (c === null) return
-    if (c === '') {
-      if (!feito(nome)) return
-      await marcarExercicio(banco, { data, divisao: atual.nome, exercicio: nome, cargaKg: null })
-    } else {
-      await marcarExercicio(banco, { data, divisao: atual.nome, exercicio: nome, cargaKg: c })
-    }
+    // Vazia ou inválida: o banco não fica com um valor que a tela não mostra.
+    if (typeof c === 'number') await marcarExercicio(banco, { data, divisao: atual.nome, exercicio: nome, cargaKg: c })
+    else await limparCarga(banco, data, nome)
     mudou()
   }
 
@@ -82,10 +81,12 @@ export function FichaTreino({ ficha, data }: { ficha: Divisao[]; data: string })
                 inputMode="decimal"
                 aria-label={`Carga de ${e.nome} (kg)`}
                 placeholder="kg"
+                aria-invalid={lerCarga(cargas[e.nome] ?? '') === null}
                 value={cargas[e.nome] ?? ''}
                 onChange={(ev) => digitar(e.nome, ev.target.value)}
               />
             </div>
+            {lerCarga(cargas[e.nome] ?? '') === null && <small className="obs">Carga entre 0 e 500 kg</small>}
           </div>
         )
       })}

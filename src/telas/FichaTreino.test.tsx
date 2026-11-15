@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, expect, test } from 'vitest'
 import { abrirBanco, type Banco } from '../db/banco'
@@ -89,4 +89,31 @@ test('mostra a carga da última vez e a de hoje já registrada', async () => {
   expect(screen.getByLabelText('Carga de Crucifixo (kg)')).toHaveValue('12,5')
   expect(screen.getByRole('checkbox', { name: 'Crucifixo' })).toBeChecked()
   expect(screen.getAllByText(/última:/)).toHaveLength(1)
+})
+
+test('carga inválida depois de prefixos válidos não deixa valor escondido no banco', async () => {
+  const u = abrir()
+  await u.type(screen.getByLabelText('Carga de Supino reto (kg)'), '600')
+  await waitFor(() => expect(exerciciosDoDia(b, HOJE)).toEqual([{ exercicio: 'Supino reto', divisao: 'A', cargaKg: null }]))
+  expect(screen.getByText('Carga entre 0 e 500 kg')).toBeInTheDocument()
+})
+
+test('apagar a carga antes de terminar de salvar não deixa a carga gravada', async () => {
+  b.salvar = () => new Promise((r) => setTimeout(r, 30))
+  abrir()
+  const campo = screen.getByLabelText('Carga de Supino reto (kg)')
+  fireEvent.change(campo, { target: { value: '5' } })
+  fireEvent.change(campo, { target: { value: '' } })
+  await new Promise((r) => setTimeout(r, 80))
+  expect(exerciciosDoDia(b, HOJE).find((e) => e.exercicio === 'Supino reto')?.cargaKg ?? null).toBeNull()
+})
+
+test('dois toques rápidos na caixa desmarcam', async () => {
+  b.salvar = () => new Promise((r) => setTimeout(r, 30))
+  abrir()
+  const caixa = screen.getByRole('checkbox', { name: 'Supino reto' })
+  fireEvent.click(caixa)
+  fireEvent.click(caixa)
+  await new Promise((r) => setTimeout(r, 80))
+  expect(exerciciosDoDia(b, HOJE)).toEqual([])
 })
