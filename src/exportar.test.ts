@@ -35,4 +35,5 @@ test('backup sem a tabela de apelidos continua válido; apelidos entram no csv',
 test('porções entram na exportação', async () => {
   const b = await abrirBanco()
   expect(tabelaParaCsv(b, 'porcoes').split('\n')[0]).toBe('id;alimento_id;nome;gramas;origem')
+  expect(tabelaParaCsv(b, 'exercicios_feitos').split('\n')[0]).toBe('id;data;divisao;exercicio;carga_kg')
 })

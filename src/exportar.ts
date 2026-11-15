@@ -1,6 +1,6 @@
 import { carregarSql, consultar, type Banco } from './db/banco'
 
-export const TABELAS = ['perfil', 'alimentos', 'refeicoes', 'treinos', 'apelidos', 'pesos', 'porcoes'] as const
+export const TABELAS = ['perfil', 'alimentos', 'refeicoes', 'treinos', 'apelidos', 'pesos', 'porcoes', 'exercicios_feitos'] as const
 /** Tabelas que um backup precisa ter (backups de versões antigas não têm 'apelidos' nem 'pesos'). */
 export const TABELAS_OBRIGATORIAS = ['perfil', 'alimentos', 'refeicoes', 'treinos'] as const
 

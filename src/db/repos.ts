@@ -314,3 +314,57 @@ export async function removerPeso(b: Banco, id: number): Promise<boolean> {
   await b.salvar()
   return true
 }
+
+// ---- ficha de treino
+export interface ExercicioFeito { exercicio: string; divisao: string; cargaKg: number | null }
+
+export function exerciciosDoDia(b: Banco, data: string): ExercicioFeito[] {
+  return consultar<ExercicioFeito>(
+    b,
+    'SELECT exercicio, divisao, carga_kg AS cargaKg FROM exercicios_feitos WHERE data = ? ORDER BY id',
+    [data],
+  )
+}
+
+/** Marca o exercício como feito no dia. A carga só muda se `cargaKg` vier (null limpa). */
+export async function marcarExercicio(
+  b: Banco,
+  e: { data: string; divisao: string; exercicio: string; cargaKg?: number | null },
+): Promise<void> {
+  if (e.cargaKg === undefined) {
+    b.db.run(
+      `INSERT INTO exercicios_feitos (data, divisao, exercicio) VALUES (?, ?, ?)
+       ON CONFLICT (data, exercicio) DO UPDATE SET divisao = excluded.divisao`,
+      [e.data, e.divisao, e.exercicio],
+    )
+  } else {
+    b.db.run(
+      `INSERT INTO exercicios_feitos (data, divisao, exercicio, carga_kg) VALUES (?, ?, ?, ?)
+       ON CONFLICT (data, exercicio) DO UPDATE SET divisao = excluded.divisao, carga_kg = excluded.carga_kg`,
+      [e.data, e.divisao, e.exercicio, e.cargaKg],
+    )
+  }
+  await b.salvar()
+}
+
+export async function desmarcarExercicio(b: Banco, data: string, exercicio: string): Promise<void> {
+  b.db.run('DELETE FROM exercicios_feitos WHERE data = ? AND exercicio = ?', [data, exercicio])
+  await b.salvar()
+}
+
+/** Carga mais recente do exercício (pelo nome) em um dia anterior a `antesDe`. */
+export function ultimaCarga(b: Banco, exercicio: string, antesDe: string): number | null {
+  const r = consultar<{ c: number }>(
+    b,
+    `SELECT carga_kg AS c FROM exercicios_feitos
+     WHERE exercicio = ? AND data < ? AND carga_kg IS NOT NULL ORDER BY data DESC, id DESC LIMIT 1`,
+    [exercicio, antesDe],
+  )
+  return r[0]?.c ?? null
+}
+
+/** Divisão do registro mais recente (para abrir na seguinte). */
+export function ultimaDivisao(b: Banco): string | null {
+  const r = consultar<{ d: string }>(b, 'SELECT divisao AS d FROM exercicios_feitos ORDER BY data DESC, id DESC LIMIT 1')
+  return r[0]?.d ?? null
+}

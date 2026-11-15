@@ -59,4 +59,13 @@ CREATE TABLE IF NOT EXISTS porcoes (
   UNIQUE (alimento_id, nome, origem)
 );
 CREATE INDEX IF NOT EXISTS idx_porcoes_alimento ON porcoes(alimento_id);
+CREATE TABLE IF NOT EXISTS exercicios_feitos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  data TEXT NOT NULL,
+  divisao TEXT NOT NULL,
+  exercicio TEXT NOT NULL,
+  carga_kg REAL CHECK (carga_kg IS NULL OR (carga_kg > 0 AND carga_kg <= 500)),
+  UNIQUE (data, exercicio)
+);
+CREATE INDEX IF NOT EXISTS idx_exercicios_exercicio ON exercicios_feitos(exercicio);
 `
