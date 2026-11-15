@@ -142,6 +142,7 @@ label { display: block; font-size: .85rem; color: var(--suave); margin-bottom: 1
 .exercicio .carga { grid-column: 2; grid-row: 1 / span 3; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .exercicio .carga small { color: var(--suave); font-size: .78rem; }
 .exercicio .carga input { width: 76px; text-align: right; }
+.exercicio .carga button.ultima-carga { background: transparent; color: var(--acento); font-size: .78rem; font-weight: 500; padding: 6px 0; min-height: 0; text-decoration: underline dotted; text-underline-offset: 3px; }
 
 /* editor da ficha */
 .titulo-acao { display: flex; align-items: center; justify-content: space-between; gap: 12px; }

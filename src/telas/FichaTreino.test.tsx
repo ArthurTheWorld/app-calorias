@@ -118,3 +118,14 @@ test('dois toques rápidos na caixa desmarcam', async () => {
   await new Promise((r) => setTimeout(r, 80))
   expect(exerciciosDoDia(b, HOJE)).toEqual([])
 })
+
+test('tocar na última carga repete o valor e marca como feito', async () => {
+  await marcarExercicio(b, { data: '2026-11-07', divisao: 'A', exercicio: 'Supino reto', cargaKg: 32.5 })
+  const u = abrir()
+  await u.click(screen.getByRole('radio', { name: /A/ }))
+  await u.type(screen.getByLabelText('Carga de Supino reto (kg)'), '20')
+  await u.click(screen.getByRole('button', { name: 'Repetir última carga de Supino reto: 32,5 kg' }))
+  await waitFor(() => expect(exerciciosDoDia(b, HOJE)).toEqual([{ exercicio: 'Supino reto', divisao: 'A', cargaKg: 32.5 }]))
+  expect(screen.getByLabelText('Carga de Supino reto (kg)')).toHaveValue('32,5')
+  expect(screen.getByRole('checkbox', { name: 'Supino reto' })).toBeChecked()
+})

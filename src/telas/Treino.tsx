@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useHojeApp } from '../useHojeApp'
 import { kcalTreino, type Perfil } from '../calc/energia'
 import { METS } from '../calc/mets'
@@ -32,10 +32,17 @@ export function Treino({ perfil }: { perfil: Perfil }) {
     mudou()
   }
 
+  const criando = useRef(false)
   async function montarFicha() {
-    await adicionarDivisao(banco)
-    mudou()
-    setEditando(true)
+    if (criando.current) return // toque duplo: uma divisão só
+    criando.current = true
+    try {
+      await adicionarDivisao(banco)
+      mudou()
+      setEditando(true)
+    } finally {
+      criando.current = false
+    }
   }
 
   if (editando) return <EditarFicha fechar={() => setEditando(false)} />

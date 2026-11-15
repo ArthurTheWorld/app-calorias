@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { abrirBanco, type Banco } from '../db/banco'
@@ -156,4 +156,42 @@ test('renomear divisão grava só o nome final, sem misturar com histórico de n
   await waitFor(() => expect(lerFicha(b)[0].nome).toBe('Costas'))
   expect(exerciciosDoDia(b, '2026-11-08')[0].divisao).toBe('C')
   expect(exerciciosDoDia(b, '2026-11-10')[0].divisao).toBe('Costas')
+})
+
+test('toque duplo em Montar ficha cria uma divisão só', async () => {
+  abrir()
+  const botao = screen.getByRole('button', { name: 'Montar ficha' })
+  fireEvent.click(botao)
+  fireEvent.click(botao)
+  expect(await screen.findByRole('heading', { name: 'Editar ficha' })).toBeInTheDocument()
+  expect(lerFicha(b).map((d) => d.nome)).toEqual(['A'])
+})
+
+test('toque duplo em + Divisão cria uma divisão só', async () => {
+  await adicionarDivisao(b)
+  const u = abrir()
+  await u.click(screen.getByRole('button', { name: 'Editar ficha' }))
+  const botao = screen.getByRole('button', { name: '+ Divisão' })
+  fireEvent.click(botao)
+  fireEvent.click(botao)
+  await waitFor(() => expect(chipMarcado()).toHaveTextContent('B'))
+  expect(lerFicha(b).map((d) => d.nome)).toEqual(['A', 'B'])
+})
+
+test('sair do campo com nome vazio ou repetido volta ao último nome salvo', async () => {
+  await adicionarDivisao(b)
+  await adicionarDivisao(b)
+  const u = abrir()
+  await u.click(screen.getByRole('button', { name: 'Editar ficha' }))
+  const nome = screen.getByLabelText('Nome da divisão')
+  await u.clear(nome)
+  expect(screen.getByText('Dê um nome à divisão.')).toBeInTheDocument()
+  await u.click(screen.getByLabelText('Descrição'))
+  expect(nome).toHaveValue('A')
+  expect(screen.queryByText('Dê um nome à divisão.')).not.toBeInTheDocument()
+  await u.clear(nome)
+  await u.type(nome, 'b')
+  await u.click(screen.getByLabelText('Descrição'))
+  expect(nome).toHaveValue('A')
+  expect(lerFicha(b).map((d) => d.nome)).toEqual(['A', 'B'])
 })

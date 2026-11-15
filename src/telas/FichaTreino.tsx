@@ -77,7 +77,15 @@ export function FichaTreino({ ficha, data, aoEditar }: { ficha: Divisao[]; data:
             <small>{e.series} × {e.reps}</small>
             {e.obs && <small className="obs">{e.obs}</small>}
             <div className="carga">
-              {ultima !== null && <small>última: {kg(ultima)} kg</small>}
+              {ultima !== null && (
+                <button
+                  className="ultima-carga"
+                  aria-label={`Repetir última carga de ${e.nome}: ${kg(ultima)} kg`}
+                  onClick={() => digitar(e.nome, kg(ultima))}
+                >
+                  última: {kg(ultima)} kg
+                </button>
+              )}
               <input
                 inputMode="decimal"
                 aria-label={`Carga de ${e.nome} (kg)`}

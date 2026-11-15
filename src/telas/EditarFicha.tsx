@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   adicionarDivisao, adicionarExercicio, editarDescricao, editarDivisao, editarExercicio, lerFicha, moverExercicio, removerDivisao,
   removerExercicio,
@@ -19,10 +19,17 @@ export function EditarFicha({ fechar }: { fechar: () => void }) {
   const [selId, setSelId] = useState<number | null>(null)
   const atual = ficha.find((d) => d.id === selId) ?? ficha[0]
 
+  const criando = useRef(false)
   async function novaDivisao() {
-    const id = await adicionarDivisao(banco)
-    setSelId(id)
-    mudou()
+    if (criando.current) return // toque duplo: uma divisão só
+    criando.current = true
+    try {
+      const id = await adicionarDivisao(banco)
+      setSelId(id)
+      mudou()
+    } finally {
+      criando.current = false
+    }
   }
 
   return (
@@ -66,7 +73,8 @@ function EditorDivisao({ divisao, outras }: { divisao: Divisao; outras: Divisao[
     mudou()
   }
   async function salvarNome() {
-    if (!nomeValido || nome.trim() === divisao.nome) return
+    if (!nomeValido) { setNome(divisao.nome); return } // inválido: volta ao último nome salvo
+    if (nome.trim() === divisao.nome) return
     if (await editarDivisao(banco, divisao.id, { nome, titulo })) mudou()
   }
 
