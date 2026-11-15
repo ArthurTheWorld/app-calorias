@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, expect, test, vi } from 'vitest'
 import { abrirBanco, type Banco } from '../db/banco'
 import { adicionarDivisao, adicionarExercicio, lerFicha } from '../db/ficha'
-import { salvarPerfil } from '../db/repos'
+import { exerciciosDoDia, marcarExercicio, salvarPerfil } from '../db/repos'
 import { ProvedorBanco } from '../estado'
 import { Treino } from './Treino'
 
@@ -103,7 +103,8 @@ test('+ Divisão cria a próxima letra; renomear grava; nome repetido avisa', as
   const u = abrir()
   await u.click(screen.getByRole('button', { name: 'Editar ficha' }))
   await u.click(screen.getByRole('button', { name: '+ Divisão' }))
-  expect(chipMarcado()).toHaveTextContent('B')
+  await waitFor(() => expect(chipMarcado()).toHaveTextContent('B'))
+  await waitFor(() => expect(screen.getByLabelText('Nome da divisão')).toHaveValue('B'))
   const nome = screen.getByLabelText('Nome da divisão')
   await u.clear(nome)
   await u.type(nome, 'a')
@@ -112,7 +113,7 @@ test('+ Divisão cria a próxima letra; renomear grava; nome repetido avisa', as
   await u.type(nome, 'Pernas')
   await u.type(screen.getByLabelText('Descrição'), 'Quadríceps')
   await waitFor(() => expect(lerFicha(b)[1]).toMatchObject({ nome: 'Pernas', titulo: 'Quadríceps' }))
-  expect(within(screen.getByRole('radiogroup', { name: 'Divisões' })).getByRole('radio', { name: 'Pernas' })).toBeInTheDocument()
+  expect(await within(screen.getByRole('radiogroup', { name: 'Divisões' })).findByRole('radio', { name: 'Pernas' })).toBeInTheDocument()
 })
 
 test('remover divisão pede confirmação', async () => {
@@ -139,4 +140,20 @@ test('remover a última divisão e sair volta para Montar ficha', async () => {
   await waitFor(() => expect(lerFicha(b)).toEqual([]))
   await u.click(screen.getByRole('button', { name: 'Pronto' }))
   expect(screen.getByRole('button', { name: 'Montar ficha' })).toBeInTheDocument()
+})
+
+test('renomear divisão grava só o nome final, sem misturar com histórico de nomes intermediários', async () => {
+  await adicionarDivisao(b)
+  await marcarExercicio(b, { data: '2026-11-08', divisao: 'C', exercicio: 'Agachamento' })
+  await marcarExercicio(b, { data: '2026-11-10', divisao: 'A', exercicio: 'Supino' })
+  const u = abrir()
+  await u.click(screen.getByRole('button', { name: 'Editar ficha' }))
+  const nome = screen.getByLabelText('Nome da divisão')
+  await u.clear(nome)
+  await u.type(nome, 'Costas')
+  expect(lerFicha(b)[0].nome).toBe('A')
+  await u.click(screen.getByRole('button', { name: 'Pronto' }))
+  await waitFor(() => expect(lerFicha(b)[0].nome).toBe('Costas'))
+  expect(exerciciosDoDia(b, '2026-11-08')[0].divisao).toBe('C')
+  expect(exerciciosDoDia(b, '2026-11-10')[0].divisao).toBe('Costas')
 })

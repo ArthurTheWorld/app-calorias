@@ -60,6 +60,12 @@ export async function editarDivisao(b: Banco, id: number, d: { nome: string; tit
   return true
 }
 
+/** Só a descrição da divisão (não toca no nome). */
+export async function editarDescricao(b: Banco, id: number, titulo: string | null): Promise<void> {
+  b.db.run('UPDATE divisoes SET titulo = ? WHERE id = ?', [limpo(titulo), id])
+  await b.salvar()
+}
+
 export async function removerDivisao(b: Banco, id: number): Promise<void> {
   b.db.run('DELETE FROM exercicios_ficha WHERE divisao_id = ?', [id])
   b.db.run('DELETE FROM divisoes WHERE id = ?', [id])
@@ -99,8 +105,14 @@ export async function editarExercicio(b: Banco, id: number, e: DadosExercicio): 
   b.db.run('BEGIN')
   try {
     b.db.run('UPDATE exercicios_ficha SET nome = ?, series = ?, reps = ?, obs = ? WHERE id = ?', [v.nome, v.series, v.reps, v.obs, id])
+    // Só leva o histórico se nenhum outro exercício da ficha ainda usa o nome antigo (o histórico é por nome).
     // OR IGNORE: um dia que já tem registro com o nome novo fica como está.
-    if (atual.nome !== v.nome) b.db.run('UPDATE OR IGNORE exercicios_feitos SET exercicio = ? WHERE exercicio = ?', [v.nome, atual.nome])
+    const compartilhado = consultar<{ n: number }>(
+      b, 'SELECT COUNT(*) AS n FROM exercicios_ficha WHERE nome = ? AND id <> ?', [atual.nome, id],
+    )[0].n > 0
+    if (atual.nome !== v.nome && !compartilhado) {
+      b.db.run('UPDATE OR IGNORE exercicios_feitos SET exercicio = ? WHERE exercicio = ?', [v.nome, atual.nome])
+    }
     b.db.run('COMMIT')
   } catch (err) {
     b.db.run('ROLLBACK')

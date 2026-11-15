@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
-  adicionarDivisao, adicionarExercicio, editarDivisao, editarExercicio, lerFicha, moverExercicio, removerDivisao,
+  adicionarDivisao, adicionarExercicio, editarDescricao, editarDivisao, editarExercicio, lerFicha, moverExercicio, removerDivisao,
   removerExercicio,
 } from '../db/ficha'
 import { normalizar } from '../db/repos'
@@ -60,9 +60,14 @@ function EditorDivisao({ divisao, outras }: { divisao: Divisao; outras: Divisao[
   const nomeRepetido = !nomeVazio && outras.some((o) => chave(o.nome) === chave(nome))
   const nomeValido = !nomeVazio && !nomeRepetido
 
-  async function salvarDivisao(n: string, t: string) {
-    const ok = n.trim() !== '' && !outras.some((o) => chave(o.nome) === chave(n))
-    if (await editarDivisao(banco, divisao.id, { nome: ok ? n : divisao.nome, titulo: t })) mudou()
+  /** Descrição grava a cada tecla; o nome só ao sair do campo, para nomes intermediários não irem ao histórico. */
+  async function salvarTitulo(t: string) {
+    await editarDescricao(banco, divisao.id, t)
+    mudou()
+  }
+  async function salvarNome() {
+    if (!nomeValido || nome.trim() === divisao.nome) return
+    if (await editarDivisao(banco, divisao.id, { nome, titulo })) mudou()
   }
 
   const seriesNum = /^\d+$/.test(form?.series.trim() ?? '') ? Number(form!.series.trim()) : NaN
@@ -94,7 +99,7 @@ function EditorDivisao({ divisao, outras }: { divisao: Divisao; outras: Divisao[
     <div className="editor-divisao">
       <div className="formulario">
         <label>Nome da divisão
-          <input value={nome} onChange={(ev) => { setNome(ev.target.value); salvarDivisao(ev.target.value, titulo) }} />
+          <input value={nome} onChange={(ev) => setNome(ev.target.value)} onBlur={salvarNome} />
         </label>
         {nomeVazio && <p className="dica">Dê um nome à divisão.</p>}
         {nomeRepetido && <p className="dica">Use um nome que ainda não existe.</p>}
@@ -102,7 +107,7 @@ function EditorDivisao({ divisao, outras }: { divisao: Divisao; outras: Divisao[
           <input
             value={titulo}
             placeholder="Ex.: Peito e tríceps"
-            onChange={(ev) => { setTitulo(ev.target.value); salvarDivisao(nomeValido ? nome : divisao.nome, ev.target.value) }}
+            onChange={(ev) => { setTitulo(ev.target.value); salvarTitulo(ev.target.value) }}
           />
         </label>
       </div>

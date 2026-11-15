@@ -117,3 +117,14 @@ test('remover exercício', async () => {
   await removerExercicio(b, lerFicha(b)[0].exercicios[0].id)
   expect(lerFicha(b)[0].exercicios).toEqual([])
 })
+
+test('renomear exercício presente em outra divisão não mexe no histórico compartilhado', async () => {
+  const a = await adicionarDivisao(b)
+  const c = await adicionarDivisao(b)
+  await adicionarExercicio(b, a, ex('Supino'))
+  await adicionarExercicio(b, c, ex('Supino'))
+  await marcarExercicio(b, { data: '2026-11-10', divisao: 'B', exercicio: 'Supino', cargaKg: 30 })
+  const idA = lerFicha(b)[0].exercicios[0].id
+  expect(await editarExercicio(b, idA, ex('Supino reto'))).toBe(true)
+  expect(ultimaCarga(b, 'Supino', '2026-11-14')).toBe(30)
+})
