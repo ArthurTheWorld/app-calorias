@@ -36,3 +36,11 @@ O treino de musculação está no MFit e vai ser trocado. O usuário quer o trei
 
 ## Fica para quem constrói
 - Nomes de componentes, estilos seguindo o visual "Painel de status".
+
+## Mudança em 2026-11-15: editor no app (substitui a abordagem 1)
+O usuário pediu para cadastrar os exercícios ele mesmo, com a aba pronta. Aprovado:
+- Ficha sai do código e vai para o banco (v7): `divisoes (id, nome, titulo, ordem)` e `exercicios_ficha (id, divisao_id, nome, series, reps, obs, ordem)`.
+- Ficha vazia: cartão "Ficha de treino" com "Montar ficha" (cria a divisão A e abre o editor). Ficha montada: botão "Editar ficha".
+- Editor: chips das divisões + "+ Divisão" (próxima letra livre), campos "Nome da divisão" e "Descrição"; lista de exercícios "Nome · 4 × 10" com ↑ ↓ ✎ ×; formulário Nome, Séries, Repetições (texto livre), Observação (opcional), "Salvar exercício"; "Remover divisão X" com confirmação; "Pronto".
+- Grava na hora. Remover exercício/divisão não apaga histórico. Corrigir o nome (✎) leva o histórico de cargas junto; renomear divisão também atualiza o histórico.
+- Chamadas minhas: nome de divisão único e não vazio; exercício com nome repetido na mesma divisão é recusado; séries inteiras de 1 a 20; novo exercício abre com 4 × 10.
