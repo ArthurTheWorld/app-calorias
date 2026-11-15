@@ -8,10 +8,11 @@ import type { Divisao } from '../treino/ficha'
 import { FichaTreino, divisaoInicial } from './FichaTreino'
 
 const HOJE = '2026-11-14'
+const e = (id: number, nome: string, series: number, reps: string) => ({ id, nome, series, reps, obs: null })
 const FICHA: Divisao[] = [
-  { nome: 'A', titulo: 'Peito e tríceps', exercicios: [{ nome: 'Supino reto', series: 4, reps: '10' }, { nome: 'Crucifixo', series: 3, reps: '12' }] },
-  { nome: 'B', titulo: 'Costas', exercicios: [{ nome: 'Remada', series: 4, reps: '10-12' }] },
-  { nome: 'C', exercicios: [{ nome: 'Agachamento', series: 4, reps: '8' }] },
+  { id: 1, nome: 'A', titulo: 'Peito e tríceps', exercicios: [e(1, 'Supino reto', 4, '10'), e(2, 'Crucifixo', 3, '12')] },
+  { id: 2, nome: 'B', titulo: 'Costas', exercicios: [e(3, 'Remada', 4, '10-12')] },
+  { id: 3, nome: 'C', titulo: null, exercicios: [e(4, 'Agachamento', 4, '8')] },
 ]
 let b: Banco
 beforeEach(async () => { b = await abrirBanco() })

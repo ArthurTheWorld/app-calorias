@@ -1,9 +1,6 @@
-export interface ExercicioFicha { nome: string; series: number; reps: string; obs?: string }
-export interface Divisao { nome: string; titulo?: string; exercicios: ExercicioFicha[] }
+/** Ficha de treino: o usuário monta e edita pelo app (tabelas `divisoes` e `exercicios_ficha`). */
+export interface ExercicioFicha { id: number; nome: string; series: number; reps: string; obs: string | null }
+export interface Divisao { id: number; nome: string; titulo: string | null; exercicios: ExercicioFicha[] }
 
-/**
- * Ficha de treino atual, cadastrada a partir dos prints do usuário (o MFit não exporta).
- * Vazia até o próximo treino: enquanto estiver vazia, a aba Treino não mostra a ficha.
- * O histórico de cargas é por nome do exercício, então trocar a ficha não perde nada.
- */
-export const FICHA: Divisao[] = []
+/** Dados de um exercício como o usuário digita no editor. */
+export interface DadosExercicio { nome: string; series: number; reps: string; obs: string | null }

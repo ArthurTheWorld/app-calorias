@@ -68,4 +68,20 @@ CREATE TABLE IF NOT EXISTS exercicios_feitos (
   UNIQUE (data, exercicio)
 );
 CREATE INDEX IF NOT EXISTS idx_exercicios_exercicio ON exercicios_feitos(exercicio);
+CREATE TABLE IF NOT EXISTS divisoes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  nome TEXT NOT NULL,
+  titulo TEXT,
+  ordem INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS exercicios_ficha (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  divisao_id INTEGER NOT NULL REFERENCES divisoes(id) ON DELETE CASCADE,
+  nome TEXT NOT NULL,
+  series INTEGER NOT NULL CHECK (series BETWEEN 1 AND 20),
+  reps TEXT NOT NULL,
+  obs TEXT,
+  ordem INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_exercicios_ficha_divisao ON exercicios_ficha(divisao_id);
 `

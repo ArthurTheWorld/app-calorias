@@ -22,7 +22,7 @@ export function divisaoInicial(ficha: Divisao[], hoje: ExercicioFeito[], ultima:
   return i === -1 ? nomes[0] : nomes[(i + 1) % nomes.length]
 }
 
-export function FichaTreino({ ficha, data }: { ficha: Divisao[]; data: string }) {
+export function FichaTreino({ ficha, data, aoEditar }: { ficha: Divisao[]; data: string; aoEditar?: () => void }) {
   const { banco, versao, mudou } = useBanco()
   const feitos = useMemo(() => exerciciosDoDia(banco, data), [banco, data, versao])
   const [divisao, setDivisao] = useState(() => divisaoInicial(ficha, exerciciosDoDia(banco, data), ultimaDivisao(banco)))
@@ -57,6 +57,7 @@ export function FichaTreino({ ficha, data }: { ficha: Divisao[]; data: string })
 
   return (
     <div className="cartao ficha">
+      {aoEditar && <button className="editar-ficha discreto" onClick={aoEditar}>Editar ficha</button>}
       <div className="porcoes" role="radiogroup" aria-label="Divisão">
         {ficha.map((d) => (
           <button key={d.nome} role="radio" aria-checked={d.nome === atual.nome} onClick={() => setDivisao(d.nome)}>

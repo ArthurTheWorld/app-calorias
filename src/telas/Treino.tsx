@@ -2,15 +2,18 @@ import { useMemo, useState } from 'react'
 import { useHojeApp } from '../useHojeApp'
 import { kcalTreino, type Perfil } from '../calc/energia'
 import { METS } from '../calc/mets'
+import { adicionarDivisao, lerFicha } from '../db/ficha'
 import { addTreino, removerTreino, treinosDoDia } from '../db/repos'
 import { useBanco } from '../estado'
-import { FICHA, type Divisao } from '../treino/ficha'
+import { EditarFicha } from './EditarFicha'
 import { FichaTreino } from './FichaTreino'
 
-export function Treino({ perfil, ficha = FICHA }: { perfil: Perfil; ficha?: Divisao[] }) {
+export function Treino({ perfil }: { perfil: Perfil }) {
   const { banco, versao, mudou } = useBanco()
   const data = useHojeApp()
   const treinos = useMemo(() => treinosDoDia(banco, data), [banco, data, versao])
+  const ficha = useMemo(() => lerFicha(banco), [banco, versao])
+  const [editando, setEditando] = useState(false)
 
   const [tipo, setTipo] = useState('Musculação')
   const [duracao, setDuracao] = useState('60')
@@ -29,10 +32,26 @@ export function Treino({ perfil, ficha = FICHA }: { perfil: Perfil; ficha?: Divi
     mudou()
   }
 
+  async function montarFicha() {
+    await adicionarDivisao(banco)
+    mudou()
+    setEditando(true)
+  }
+
+  if (editando) return <EditarFicha fechar={() => setEditando(false)} />
+
   return (
     <section>
       <h1>Treino de hoje</h1>
-      {ficha.length > 0 && <FichaTreino key={data} ficha={ficha} data={data} />}
+      {ficha.length > 0 ? (
+        <FichaTreino key={data} ficha={ficha} data={data} aoEditar={() => setEditando(true)} />
+      ) : (
+        <div className="cartao">
+          <h2>Ficha de treino</h2>
+          <p className="dica">Monte sua ficha para marcar os exercícios e as cargas.</p>
+          <button onClick={montarFicha}>Montar ficha</button>
+        </div>
+      )}
       <div className="cartao formulario">
         <label>Tipo
           <select value={tipo} onChange={(e) => { setTipo(e.target.value); setKcalManual(null) }}>

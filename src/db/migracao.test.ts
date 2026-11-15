@@ -46,16 +46,16 @@ test('banco v1 migra sem perder registros e aceita madrugada', async () => {
   ])
   await addRefeicao(b, { data: '2026-11-13', tipo: 'madrugada', alimentoId: 1, gramas: 50 })
   expect(refeicoesDoDia(b, '2026-11-13')).toHaveLength(5)
-  expect(versao(b)).toBe(6)
+  expect(versao(b)).toBe(7)
 
   const b2 = await abrirBanco(b.exportar())
   expect(refeicoesDoDia(b2, '2026-11-13')).toHaveLength(5)
-  expect(versao(b2)).toBe(6)
+  expect(versao(b2)).toBe(7)
 })
 
 test('banco novo aceita madrugada e recusa tipo inválido', async () => {
   const b = await abrirBanco()
-  expect(versao(b)).toBe(6)
+  expect(versao(b)).toBe(7)
   const id = await criarAlimento(b, { nome: 'X', kcal100g: 100, proteinaG: 0, carboG: 0, gorduraG: 0, origem: 'custom' })
   await addRefeicao(b, { data: '2026-11-13', tipo: 'madrugada', alimentoId: id, gramas: 50 })
   expect(() => b.db.run(
@@ -77,7 +77,7 @@ test('banco v2 (sem apelidos) vira v3 e aceita apelidos', async () => {
   const db = new SQL.Database(await bancoV1())
   db.run('PRAGMA user_version = 2')
   const b = await abrirBanco(db.export())
-  expect(versao(b)).toBe(6)
+  expect(versao(b)).toBe(7)
   await adicionarApelido(b, 1, 'marmita')
   expect(apelidosDoUsuario(b)).toHaveLength(1)
 })
@@ -100,7 +100,7 @@ test('v4 → v5 adiciona qtd e porcao preservando refeições', async () => {
   const m = await abrirBanco(b.exportar())
   expect(colunas(m)).toEqual(expect.arrayContaining(['qtd', 'porcao']))
   expect(refeicoesDoDia(m, '2026-11-13').map((r) => [r.gramas, r.qtd, r.porcao])).toEqual([[50, null, null]])
-  expect(versao(m)).toBe(6)
+  expect(versao(m)).toBe(7)
 })
 
 test('v1 → v5 também ganha qtd e porcao', async () => {
@@ -115,5 +115,18 @@ test('v5 → v6 cria exercicios_feitos', async () => {
   const m = await abrirBanco(b.exportar())
   expect(consultar<{ name: string }>(m, 'PRAGMA table_info(exercicios_feitos)').map((c) => c.name))
     .toEqual(['id', 'data', 'divisao', 'exercicio', 'carga_kg'])
-  expect(versao(m)).toBe(6)
+  expect(versao(m)).toBe(7)
+})
+
+test('v6 → v7 cria divisoes e exercicios_ficha', async () => {
+  const b = await abrirBanco()
+  b.db.run('DROP TABLE exercicios_ficha')
+  b.db.run('DROP TABLE divisoes')
+  b.db.run('PRAGMA user_version = 6')
+  const m = await abrirBanco(b.exportar())
+  expect(consultar<{ name: string }>(m, 'PRAGMA table_info(divisoes)').map((c) => c.name))
+    .toEqual(['id', 'nome', 'titulo', 'ordem'])
+  expect(consultar<{ name: string }>(m, 'PRAGMA table_info(exercicios_ficha)').map((c) => c.name))
+    .toEqual(['id', 'divisao_id', 'nome', 'series', 'reps', 'obs', 'ordem'])
+  expect(versao(m)).toBe(7)
 })

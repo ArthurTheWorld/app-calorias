@@ -2,12 +2,13 @@ import type { Database } from 'sql.js'
 import { hojeApp } from '../calc/datas'
 import { TIPOS_REFEICAO } from '../refeicoes'
 
-export const VERSAO_BANCO = 6
+export const VERSAO_BANCO = 7
 
 const CHECK_TIPOS = TIPOS_REFEICAO.map((t) => `'${t}'`).join(',')
 
 /**
  * Leva o banco para a versão atual.
+ * v6 → v7: as tabelas `divisoes` e `exercicios_ficha` (ficha editável) vêm do SCHEMA.
  * v5 → v6: a tabela `exercicios_feitos` (ficha de treino) vem do SCHEMA.
  * v4 → v5: a tabela `porcoes` vem do SCHEMA; `refeicoes` ganha `qtd` e `porcao` (opcionais).
  * v3 → v4: a tabela `pesos` vem do SCHEMA; se estiver vazia e houver perfil, o peso do perfil vira o

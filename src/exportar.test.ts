@@ -36,4 +36,6 @@ test('porções entram na exportação', async () => {
   const b = await abrirBanco()
   expect(tabelaParaCsv(b, 'porcoes').split('\n')[0]).toBe('id;alimento_id;nome;gramas;origem')
   expect(tabelaParaCsv(b, 'exercicios_feitos').split('\n')[0]).toBe('id;data;divisao;exercicio;carga_kg')
+  expect(tabelaParaCsv(b, 'divisoes').split('\n')[0]).toBe('id;nome;titulo;ordem')
+  expect(tabelaParaCsv(b, 'exercicios_ficha').split('\n')[0]).toBe('id;divisao_id;nome;series;reps;obs;ordem')
 })

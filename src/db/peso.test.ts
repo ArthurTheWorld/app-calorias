@@ -54,7 +54,7 @@ const versao = (x: Banco) => consultar<{ user_version: number }>(x, 'PRAGMA user
 
 test('migração v3 → v4 semeia o peso do perfil na data do primeiro registro', async () => {
   const m = await abrirBanco(await bancoV3(true))
-  expect(versao(m)).toBe(6)
+  expect(versao(m)).toBe(7)
   expect(pesosRegistrados(m).map((p) => [p.data, p.pesoKg])).toEqual([['2026-11-04', 82]])
   const m2 = await abrirBanco(m.exportar())
   expect(pesosRegistrados(m2)).toHaveLength(1)
@@ -62,7 +62,7 @@ test('migração v3 → v4 semeia o peso do perfil na data do primeiro registro'
 
 test('migração v3 → v4 sem perfil deixa pesos vazia', async () => {
   const m = await abrirBanco(await bancoV3(false))
-  expect(versao(m)).toBe(6)
+  expect(versao(m)).toBe(7)
   expect(pesosRegistrados(m)).toHaveLength(0)
 })
 

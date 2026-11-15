@@ -142,3 +142,17 @@ label { display: block; font-size: .85rem; color: var(--suave); margin-bottom: 1
 .exercicio .carga { grid-column: 2; grid-row: 1 / span 3; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; }
 .exercicio .carga small { color: var(--suave); font-size: .78rem; }
 .exercicio .carga input { width: 76px; text-align: right; }
+
+/* editor da ficha */
+.titulo-acao { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+button.discreto { background: transparent; color: var(--suave); padding: 8px 0; font-weight: 500; }
+.ficha { position: relative; }
+.ficha .editar-ficha { display: block; margin: -4px 0 6px auto; color: var(--acento); }
+.editor-divisao .formulario { margin-bottom: 8px; }
+.exercicio-ficha { padding-left: 0; border-top: 1px solid var(--borda); padding-top: 8px; }
+.exercicio-ficha button { min-width: 36px; min-height: 36px; }
+.exercicio-ficha button:disabled { opacity: .25; }
+.dois-campos { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.botoes { display: flex; gap: 10px; flex-wrap: wrap; }
+.editor-divisao > button.secundario { margin-top: 10px; }
+.editor-divisao > button.discreto { display: block; margin-top: 14px; }
