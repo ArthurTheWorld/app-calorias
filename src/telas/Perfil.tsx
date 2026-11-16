@@ -9,7 +9,15 @@ import { nivel, xpTotal } from '../calc/jogo'
 import { useBanco } from '../estado'
 import { hojeApp } from '../calc/datas'
 import { abrirBanco } from '../db/banco'
-import { baixar, TABELAS, tabelaParaCsv, validarBancoImportado } from '../exportar'
+import { baixar, validarBancoImportado } from '../exportar'
+import { useSync } from '../sync/useSync'
+
+/** "hoje 14:32" ou "15/11 09:10". */
+function quando(iso: string): string {
+  const d = new Date(iso)
+  const hora = d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+  return d.toDateString() === new Date().toDateString() ? `hoje ${hora}` : `${d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })} ${hora}`
+}
 
 export function Perfil({ perfil, aoSalvar }: { perfil: TPerfil | null; aoSalvar: () => void }) {
   const { banco, mudou } = useBanco()
@@ -150,15 +158,9 @@ function Nivel() {
 
 function Dados() {
   const { banco } = useBanco()
+  const sync = useSync()
   const [msg, setMsg] = useState<string | null>(null)
   const hoje = hojeApp()
-
-  async function exportarCsvs() {
-    for (const t of TABELAS) {
-      baixar(`calorias-${t}-${hoje}.csv`, '\uFEFF' + tabelaParaCsv(banco, t), 'text/csv;charset=utf-8')
-      await new Promise((r) => setTimeout(r, 400))
-    }
-  }
 
   async function importar(arquivo: File) {
     const dados = new Uint8Array(await arquivo.arrayBuffer())
@@ -174,13 +176,30 @@ function Dados() {
 
   return (
     <div className="cartao">
-      <h2>Seus dados</h2>
-      <p className="dica">O banco fica só neste celular. Exporte de vez em quando como backup — o .sqlite abre no DuckDB, DBeaver ou pandas.</p>
+      <h2>Backup e sincronização</h2>
+      {sync.ativo && (sync.conectado ? (
+        <>
+          <p className="dica">
+            Drive conectado · última sincronização {sync.ultima ? quando(sync.ultima) : 'ainda não'}
+          </p>
+          <div className="acoes coluna">
+            <button disabled={sync.ocupado} onClick={() => sync.sincronizarAgora()}>Sincronizar agora</button>
+            <button className="discreto" onClick={() => sync.desconectar()}>Desconectar o Drive</button>
+          </div>
+        </>
+      ) : (
+        <>
+          <p className="dica">Guarda o banco no seu Google Drive e pega sozinho as mudanças feitas pelo PC.</p>
+          <div className="acoes coluna">
+            <button onClick={() => sync.conectar()}>Conectar Google Drive</button>
+          </div>
+        </>
+      ))}
+      <p className="dica">Backup em arquivo único: o .sqlite também abre no DuckDB, DBeaver ou pandas.</p>
       <div className="acoes coluna">
-        <button onClick={() => baixar(`calorias-${hoje}.sqlite`, banco.exportar() as BlobPart, 'application/vnd.sqlite3')}>Exportar banco (.sqlite)</button>
-        <button className="secundario" onClick={exportarCsvs}>Exportar CSVs</button>
+        <button className="secundario" onClick={() => baixar(`calorias-${hoje}.sqlite`, banco.exportar() as BlobPart, 'application/vnd.sqlite3')}>Baixar backup (.sqlite)</button>
         <label className="botao-arquivo secundario">
-          Importar backup (.sqlite)
+          Restaurar backup (.sqlite)
           <input type="file" accept=".sqlite,.db,application/octet-stream,application/vnd.sqlite3" hidden
             onChange={(e) => { const f = e.target.files?.[0]; if (f) importar(f); e.target.value = '' }} />
         </label>

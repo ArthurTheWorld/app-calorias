@@ -1,9 +1,21 @@
 import initSqlJs, { type Database, type SqlJsStatic } from 'sql.js'
-import { get, set } from 'idb-keyval'
+import { get, set, update } from 'idb-keyval'
 import { SCHEMA } from './schema.sql'
 import { migrar } from './migracao'
 
 const CHAVE_IDB = 'banco'
+const CHAVE_SEQ = 'seq-local'
+
+/** Quantas vezes o banco foi gravado neste aparelho (a sincronização compara com o último enviado). */
+export async function lerSeqLocal(): Promise<number> {
+  return (await get<number>(CHAVE_SEQ)) ?? 0
+}
+
+/** Grava os bytes do banco no aparelho e soma 1 no contador de gravações. */
+export async function gravarBytes(dados: Uint8Array): Promise<void> {
+  await set(CHAVE_IDB, dados)
+  await update<number>(CHAVE_SEQ, (n) => (n ?? 0) + 1)
+}
 let sqlPromise: Promise<SqlJsStatic> | null = null
 
 export function carregarSql(): Promise<SqlJsStatic> {
@@ -34,7 +46,7 @@ export async function abrirBanco(dados?: Uint8Array): Promise<Banco> {
   migrar(db)
   return {
     db,
-    salvar: () => set(CHAVE_IDB, db.export()),
+    salvar: () => gravarBytes(db.export()),
     exportar: () => db.export(),
   }
 }

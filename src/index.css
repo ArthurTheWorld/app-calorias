@@ -157,3 +157,9 @@ button.discreto { background: transparent; color: var(--suave); padding: 8px 0; 
 .botoes { display: flex; gap: 10px; flex-wrap: wrap; }
 .editor-divisao > button.secundario { margin-top: 10px; }
 .editor-divisao > button.discreto { display: block; margin-top: 14px; }
+
+/* sincronização com o Drive */
+.faixa-sync { padding: 8px 16px; border-bottom: 1px solid var(--borda); font-size: .88rem; color: var(--suave); }
+.faixa-sync p { margin: 0 0 6px; }
+.faixa-sync button.discreto { color: var(--acento); padding: 4px 0; }
+.faixa-sync .botoes { display: flex; gap: 8px; }

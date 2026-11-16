@@ -10,6 +10,8 @@ import { Perfil } from './telas/Perfil'
 import { Treino } from './telas/Treino'
 import { Historico } from './telas/Historico'
 import { Icone } from './componentes/Icone'
+import { FaixaSync } from './componentes/FaixaSync'
+import { ProvedorSync, type DepsSync } from './sync/useSync'
 import type { NomeIcone } from './calc/conquistas'
 
 type Aba = 'hoje' | 'treino' | 'historico' | 'perfil'
@@ -41,7 +43,7 @@ async function iniciarBanco(): Promise<Banco> {
   return b
 }
 
-export default function App({ banco }: { banco?: Banco }) {
+export default function App({ banco, sync }: { banco?: Banco; sync?: DepsSync }) {
   const [b, setB] = useState<Banco | null>(banco ?? null)
   const [erro, setErro] = useState<string | null>(null)
   useEffect(() => {
@@ -52,7 +54,9 @@ export default function App({ banco }: { banco?: Banco }) {
   if (!b) return <p className="vazio">Carregando…</p>
   return (
     <ProvedorBanco banco={b}>
-      <Telas />
+      <ProvedorSync deps={sync}>
+        <Telas />
+      </ProvedorSync>
     </ProvedorBanco>
   )
 }
@@ -65,6 +69,7 @@ function Telas() {
 
   return (
     <div className="app">
+      <FaixaSync />
       <main>
         {abaAtual === 'hoje' && perfil && <Hoje perfil={perfil} />}
         {abaAtual === 'treino' && perfil && <Treino perfil={perfil} />}
