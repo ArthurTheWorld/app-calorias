@@ -4,18 +4,23 @@ import { decidir } from './decidir'
 import type { ClienteDrive } from './drive'
 import { gravarEstadoSync, lerEstadoSync } from './estado'
 
-export type Resultado = { tipo: 'criado' | 'enviado' | 'baixado' | 'conflito' | 'nada' }
+export type Resultado = { tipo: 'criado' | 'enviado' | 'baixado' | 'conflito' | 'sumiu' | 'nada' }
+/** Escolha do usuário: lado do conflito, ou recriar o arquivo que sumiu do Drive. */
+export type Escolha = 'drive' | 'celular' | 'recriar'
 
 /**
- * Uma rodada de sincronização. Em 'baixado', o banco novo já está gravado no aparelho
- * e quem chamou precisa recarregar o app. Em 'conflito', nada muda até `resolver`.
+ * Uma rodada de sincronização.
+ * - 'baixado': o banco novo já está no aparelho, o `banco` em memória foi congelado; quem chamou recarrega.
+ * - 'conflito': nada muda até o usuário escolher o lado.
+ * - 'sumiu': o arquivo conhecido não existe mais no Drive; só recria com 'recriar' (evita duas cópias).
  */
-export async function sincronizar(banco: Banco, cliente: ClienteDrive, resolver?: 'drive' | 'celular'): Promise<Resultado> {
+export async function sincronizar(banco: Banco, cliente: ClienteDrive, escolha?: Escolha): Promise<Resultado> {
   const estado = await lerEstadoSync()
   const remoto = estado.fileId ? await cliente.meta(estado.fileId) : await cliente.procurar()
+  if (remoto === null && estado.fileId !== null && escolha !== 'recriar') return { tipo: 'sumiu' }
   const seqLocal = await lerSeqLocal()
   let acao = decidir({ remoto, estado, seqLocal })
-  if (acao === 'conflito' && resolver) acao = resolver === 'drive' ? 'baixar' : 'enviar'
+  if (acao === 'conflito' && (escolha === 'drive' || escolha === 'celular')) acao = escolha === 'drive' ? 'baixar' : 'enviar'
   const agora = () => new Date().toISOString()
 
   switch (acao) {
@@ -35,6 +40,9 @@ export async function sincronizar(banco: Banco, cliente: ClienteDrive, resolver?
     case 'baixar': {
       const dados = await cliente.baixar(remoto!.id)
       if (!(await validarBancoImportado(dados))) throw new Error('O arquivo do Drive não é um backup deste app.')
+      // Gravou algo no celular enquanto baixava: não sobrescreve, pergunta.
+      if ((await lerSeqLocal()) !== seqLocal) return { tipo: 'conflito' }
+      banco.congelar()
       await gravarBytes(dados)
       await gravarEstadoSync({ fileId: remoto!.id, versaoRemota: remoto!.version, seqSincronizado: await lerSeqLocal(), ultima: agora() })
       return { tipo: 'baixado' }

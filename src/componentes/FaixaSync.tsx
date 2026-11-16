@@ -15,6 +15,14 @@ export function FaixaSync() {
       </div>
     )
   }
+  if (s.sumiu) {
+    return (
+      <div className="faixa-sync" role="status">
+        <p>Não achei o arquivo do app no Drive.</p>
+        <button className="discreto" disabled={s.ocupado} onClick={() => s.recriar()}>Criar de novo no Drive</button>
+      </div>
+    )
+  }
   if (s.precisaToque) {
     return (
       <div className="faixa-sync">

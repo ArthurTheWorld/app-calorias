@@ -36,6 +36,8 @@ export interface Banco {
   salvar(): Promise<void>
   /** Bytes do arquivo .sqlite. */
   exportar(): Uint8Array
+  /** Depois de trocar o banco do aparelho (download do Drive), este objeto antigo para de gravar até recarregar. */
+  congelar(): void
 }
 
 export async function abrirBanco(dados?: Uint8Array): Promise<Banco> {
@@ -44,10 +46,12 @@ export async function abrirBanco(dados?: Uint8Array): Promise<Banco> {
   db.run('PRAGMA foreign_keys = ON;')
   db.exec(SCHEMA)
   migrar(db)
+  let congelado = false
   return {
     db,
-    salvar: () => gravarBytes(db.export()),
+    salvar: async () => { if (!congelado) await gravarBytes(db.export()) },
     exportar: () => db.export(),
+    congelar: () => { congelado = true },
   }
 }
 

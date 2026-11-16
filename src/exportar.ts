@@ -18,15 +18,24 @@ export function tabelaParaCsv(b: Banco, tabela: string): string {
   return [colunas.join(';'), ...linhas.map((l) => colunas.map((c) => celula(l[c])).join(';'))].join('\n')
 }
 
-/** Verdadeiro se os bytes são um SQLite com as tabelas do app. */
+/**
+ * Verdadeiro se os bytes são um SQLite íntegro com as tabelas do app.
+ * Recusa modo WAL (os dados recentes ficariam no arquivo -wal, fora do backup) e arquivo corrompido ou truncado.
+ */
 export async function validarBancoImportado(dados: Uint8Array): Promise<boolean> {
   try {
+    if (dados.length < 100 || dados[18] === 2 || dados[19] === 2) return false
     const SQL = await carregarSql()
     const db = new SQL.Database(dados)
-    const res = db.exec("SELECT name FROM sqlite_master WHERE type = 'table'")
-    db.close()
-    const nomes = new Set((res[0]?.values ?? []).map((v) => String(v[0])))
-    return TABELAS_OBRIGATORIAS.every((t) => nomes.has(t))
+    try {
+      const ok = db.exec('PRAGMA quick_check')[0]?.values[0]?.[0]
+      if (ok !== 'ok') return false
+      const res = db.exec("SELECT name FROM sqlite_master WHERE type = 'table'")
+      const nomes = new Set((res[0]?.values ?? []).map((v) => String(v[0])))
+      return TABELAS_OBRIGATORIAS.every((t) => nomes.has(t))
+    } finally {
+      db.close()
+    }
   } catch {
     return false
   }

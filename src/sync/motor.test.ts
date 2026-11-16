@@ -86,9 +86,51 @@ test('arquivo inválido no Drive não substitui o banco do aparelho', async () =
   expect((await lerEstadoSync()).versaoRemota).toBe('1')
 })
 
-test('arquivo apagado no Drive: cria de novo', async () => {
+test('arquivo sumiu do Drive: não recria sozinho; recria só com "recriar"', async () => {
   const { d, cliente } = driveFalso()
   await gravarEstadoSync({ fileId: 'sumiu', versaoRemota: '9', seqSincronizado: 0 })
-  expect(await sincronizar(b, cliente)).toEqual({ tipo: 'criado' })
+  expect(await sincronizar(b, cliente)).toEqual({ tipo: 'sumiu' })
+  expect(d.arquivo).toBeNull()
+  expect(await sincronizar(b, cliente, 'recriar')).toEqual({ tipo: 'criado' })
   expect(d.arquivo?.id).toBe('f1')
+})
+
+test('gravação no celular durante o download: não sobrescreve, vira conflito', async () => {
+  const { d, cliente } = driveFalso()
+  await sincronizar(b, cliente)
+  d.gravarPeloPc(await editadoNoPc(d.arquivo!.dados, { ...TREINO, tipo: 'Do PC' }))
+  const lento: typeof cliente = { ...cliente, baixar: async (id) => { await addTreino(b, { ...TREINO, tipo: 'Refeição no meio' }); return cliente.baixar(id) } }
+  expect(await sincronizar(b, lento)).toEqual({ tipo: 'conflito' })
+  expect(treinosDoDia(await carregarBancoSalvo(), TREINO.data).map((t) => t.tipo)).toEqual(['Refeição no meio'])
+})
+
+test('depois de baixar, gravações do banco antigo em memória não chegam ao aparelho', async () => {
+  const { d, cliente } = driveFalso()
+  await sincronizar(b, cliente)
+  d.gravarPeloPc(await editadoNoPc(d.arquivo!.dados, { ...TREINO, tipo: 'Do PC' }))
+  expect(await sincronizar(b, cliente)).toEqual({ tipo: 'baixado' })
+  const seq = await lerSeqLocal()
+  await addTreino(b, { ...TREINO, tipo: 'Antigo' })
+  expect(await lerSeqLocal()).toBe(seq)
+  expect(treinosDoDia(await carregarBancoSalvo(), TREINO.data).map((t) => t.tipo)).toEqual(['Do PC'])
+})
+
+test('arquivo truncado no Drive é recusado', async () => {
+  const { d, cliente } = driveFalso()
+  await addTreino(b, TREINO)
+  await sincronizar(b, cliente)
+  const pc = await editadoNoPc(d.arquivo!.dados, { ...TREINO, tipo: 'Do PC' })
+  d.gravarPeloPc(pc.slice(0, Math.floor(pc.length * 0.6)))
+  await expect(sincronizar(b, cliente)).rejects.toThrow()
+  expect(treinosDoDia(await carregarBancoSalvo(), TREINO.data)).toHaveLength(1)
+})
+
+test('banco em modo WAL no Drive é recusado (os dados recentes ficam fora do arquivo)', async () => {
+  const { d, cliente } = driveFalso()
+  await sincronizar(b, cliente)
+  const wal = (await editadoNoPc(d.arquivo!.dados, TREINO)).slice()
+  wal[18] = 2
+  wal[19] = 2
+  d.gravarPeloPc(wal)
+  await expect(sincronizar(b, cliente)).rejects.toThrow()
 })

@@ -51,10 +51,11 @@ test('marcar grava e desmarcar apaga', async () => {
   const u = abrir()
   await u.click(screen.getByRole('checkbox', { name: 'Supino reto' }))
   await waitFor(() => expect(exerciciosDoDia(b, HOJE)).toEqual([{ exercicio: 'Supino reto', divisao: 'A', cargaKg: null }]))
-  expect(screen.getByRole('checkbox', { name: 'Supino reto' })).toBeChecked()
+  // O banco muda antes do salvar terminar; a tela só re-renderiza depois: espera a tela também.
+  await waitFor(() => expect(screen.getByRole('checkbox', { name: 'Supino reto' })).toBeChecked())
   await u.click(screen.getByRole('checkbox', { name: 'Supino reto' }))
   await waitFor(() => expect(exerciciosDoDia(b, HOJE)).toEqual([]))
-  expect(screen.getByLabelText('Carga de Supino reto (kg)')).toHaveValue('')
+  await waitFor(() => expect(screen.getByLabelText('Carga de Supino reto (kg)')).toHaveValue(''))
 })
 
 test('digitar carga com vírgula grava e marca como feito', async () => {
