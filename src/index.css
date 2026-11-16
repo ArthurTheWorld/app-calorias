@@ -163,3 +163,8 @@ button.discreto { background: transparent; color: var(--suave); padding: 8px 0; 
 .faixa-sync p { margin: 0 0 6px; }
 .faixa-sync button.discreto { color: var(--acento); padding: 4px 0; }
 .faixa-sync .botoes { display: flex; gap: 8px; }
+
+/* temas */
+.temas { display: flex; gap: 14px; margin: 12px 0 4px; }
+.temas button { width: 36px; height: 36px; padding: 0; border-radius: 50%; border: 2px solid transparent; box-shadow: 0 0 0 2px var(--fundo) inset; }
+.temas button[aria-checked="true"] { border-color: var(--texto); box-shadow: 0 0 0 2px var(--fundo) inset, var(--brilho); }

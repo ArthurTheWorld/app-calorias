@@ -11,6 +11,7 @@ import { hojeApp } from '../calc/datas'
 import { abrirBanco } from '../db/banco'
 import { baixar, validarBancoImportado } from '../exportar'
 import { useSync } from '../sync/useSync'
+import { escolherTema, temaSalvo, TEMAS, type IdTema } from '../temas'
 
 /** "hoje 14:32" ou "15/11 09:10". */
 function quando(iso: string): string {
@@ -77,8 +78,32 @@ export function Perfil({ perfil, aoSalvar }: { perfil: TPerfil | null; aoSalvar:
       {perfil && <Nivel />}
       <SeusApelidos />
       <SuasPorcoes />
+      <Tema />
       <Dados />
     </section>
+  )
+}
+
+/** Cor de destaque do app; o fundo continua preto. */
+function Tema() {
+  const [atual, setAtual] = useState<IdTema>(temaSalvo)
+  return (
+    <div className="cartao">
+      <h2>Tema</h2>
+      <div className="temas" role="radiogroup" aria-label="Tema">
+        {TEMAS.map((t) => (
+          <button
+            key={t.id}
+            role="radio"
+            aria-label={t.nome}
+            aria-checked={t.id === atual}
+            style={{ background: t.acento }}
+            onClick={() => { escolherTema(t.id); setAtual(t.id) }}
+          />
+        ))}
+      </div>
+      <p className="dica">{TEMAS.find((t) => t.id === atual)?.nome}</p>
+    </div>
   )
 }
 

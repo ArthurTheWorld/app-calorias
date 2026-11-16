@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import App from '../App'
@@ -112,4 +112,20 @@ test('perfil lista e remove porções do usuário, sem as da lista', async () =>
   expect(screen.queryByText(/Xícara/)).toBeNull()
   await u.click(screen.getByRole('button', { name: 'Remover porção Minha caneca' }))
   await waitFor(() => expect(screen.queryByText('Suas porções')).toBeNull())
+})
+
+test('cartão Tema: cinco cores, um toque troca o destaque e fica marcado', async () => {
+  localStorage.clear()
+  const b = await abrirBanco()
+  await salvarPerfil(b, { alturaCm: 175, pesoKg: 80, idade: 25, sexo: 'M', deficitMeta: 300 })
+  const u = userEvent.setup()
+  render(<App banco={b} />)
+  await u.click(await screen.findByRole('button', { name: 'Perfil' }))
+  const grupo = screen.getByRole('radiogroup', { name: 'Tema' })
+  expect(within(grupo).getAllByRole('radio').map((r) => r.getAttribute('aria-label'))).toEqual(['Roxo', 'Verde', 'Rosa neon', 'Vermelho', 'Laranja'])
+  expect(within(grupo).getByRole('radio', { name: 'Roxo' })).toHaveAttribute('aria-checked', 'true')
+  await u.click(within(grupo).getByRole('radio', { name: 'Rosa neon' }))
+  expect(within(grupo).getByRole('radio', { name: 'Rosa neon' })).toHaveAttribute('aria-checked', 'true')
+  expect(document.documentElement.style.getPropertyValue('--acento')).toBe('#ff4fd8')
+  expect(localStorage.getItem('tema')).toBe('rosa')
 })
